@@ -7,6 +7,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
+    "migrate": "tsx src/migrate.ts",
+    "migrate:undo": "tsx src/migrate.ts 000",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -15,11 +17,14 @@
   "type": "commonjs",
   "dependencies": {
     "express": "^5.2.1",
+    "pg": "^8.22.0",
+    "postgrator": "^8.0.0",
     "typescript": "^6.0.3"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/node": "^26.0.0",
+    "@types/pg": "^8.20.0",
     "tsx": "^4.22.4"
   }
 }

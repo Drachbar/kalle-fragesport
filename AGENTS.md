@@ -22,9 +22,16 @@ Regler:
 - Varje ny funktion eller buggfix börjar med ett test.
 - Alla tester ska vara gröna innan arbete anses klart.
 
+## Databas och migreringar
+
+- **Starta inte databasen** (t.ex. `docker compose up` / `podman compose up`) åt användaren.
+- **Kör inte migreringarna** (t.ex. `npm run migrate`) åt användaren.
+- Användaren kör och testar detta manuellt själv. Skriv koden/migreringarna och låt användaren köra dem.
+
 ## Sammanfattning
 
 - ✅ TypeScript (strict) – frontend och backend
 - ✅ TDD (red–green–refactor) för all kod
 - ❌ Ingen produktionskod utan test först
 - ❌ Ingen ren JavaScript i källkoden
+- ❌ Starta aldrig databasen eller kör migreringar åt användaren – det sköter hen manuellt
