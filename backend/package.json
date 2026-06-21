@@ -9,22 +9,34 @@
     "start": "node dist/index.js",
     "migrate": "tsx src/migrate.ts",
     "migrate:undo": "tsx src/migrate.ts 000",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "create-admin": "tsx src/create-admin.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "bcrypt": "^6.0.0",
+    "connect-pg-simple": "^10.0.0",
     "express": "^5.2.1",
+    "express-session": "^1.19.0",
     "pg": "^8.22.0",
     "postgrator": "^8.0.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/connect-pg-simple": "^7.0.3",
     "@types/express": "^5.0.6",
+    "@types/express-session": "^1.19.0",
     "@types/node": "^26.0.0",
     "@types/pg": "^8.20.0",
-    "tsx": "^4.22.4"
+    "@types/supertest": "^7.2.0",
+    "supertest": "^7.2.2",
+    "tsx": "^4.22.4",
+    "vitest": "^4.1.9"
   }
 }
