@@ -21,6 +21,7 @@ Regler:
 - Skriv aldrig produktionskod utan att det finns ett misslyckande test som motiverar den.
 - Varje ny funktion eller buggfix börjar med ett test.
 - Alla tester ska vara gröna innan arbete anses klart.
+- För ändringar som uppenbart inte behöver tester behöver det inte tvingas fram några tester.
 
 ## Databas och migreringar
 
