@@ -1,10 +1,7 @@
-import path from "node:path";
-import { Client } from "pg";
-import Postgrator from "postgrator";
-import { getDbConfig } from "./db/config";
+import { runMigrations } from "./db/migrate";
 
 /**
- * Kör databasmigreringar med Postgrator.
+ * CLI för databasmigreringar.
  *
  * Användning:
  *   npm run migrate            -> migrera till senaste versionen
@@ -13,33 +10,12 @@ import { getDbConfig } from "./db/config";
  */
 async function main(): Promise<void> {
   const target = process.argv[2];
-  const config = getDbConfig();
-  const client = new Client(config);
+  const applied = await runMigrations(target);
 
-  await client.connect();
-
-  try {
-    const postgrator = new Postgrator({
-      driver: "pg",
-      database: config.database ?? "kalle",
-      migrationPattern: path.join(__dirname, "..", "migrations", "*"),
-      schemaTable: "schemaversion",
-      execQuery: (query) => client.query(query),
-    });
-
-    postgrator.on("migration-started", (m) =>
-      console.log(`→ ${m.action} ${m.version}: ${m.name}`),
-    );
-
-    const applied = await postgrator.migrate(target);
-
-    if (applied.length === 0) {
-      console.log("Inga migreringar att köra – databasen är redan uppdaterad.");
-    } else {
-      console.log(`Klart. ${applied.length} migrering(ar) kördes.`);
-    }
-  } finally {
-    await client.end();
+  if (applied.length === 0) {
+    console.log("Inga migreringar att köra – databasen är redan uppdaterad.");
+  } else {
+    console.log(`Klart. ${applied.length} migrering(ar) kördes.`);
   }
 }
 
