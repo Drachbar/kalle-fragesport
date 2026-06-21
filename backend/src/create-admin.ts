@@ -2,6 +2,9 @@ import { getDatabase } from "./db";
 import { runMigrations } from "./db/migrate";
 import { hashPassword } from "./auth/password";
 import { normalizeEmail } from "./users/users.repository";
+import { loadBackendEnv } from "./load-env";
+
+loadBackendEnv();
 
 /**
  * CLI för att skapa (eller återställa) ett adminkonto.

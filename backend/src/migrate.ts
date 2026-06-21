@@ -1,5 +1,8 @@
 import { runMigrations } from "./db/migrate";
 import { getDatabase } from "./db";
+import { loadBackendEnv } from "./load-env";
+
+loadBackendEnv();
 
 /**
  * CLI för databasmigreringar.

@@ -1,0 +1,60 @@
+<div class="review-header">
+  <div>
+    <h1>Granska AI-förslag</h1>
+    <p>Inget svar ändras innan du godkänner förslaget.</p>
+  </div>
+  <a class="btn btn-ghost" routerLink="/questions">Tillbaka till frågor</a>
+</div>
+
+@if (actionError()) {
+  <p role="alert" class="error">{{ actionError() }}</p>
+}
+
+@if (loading()) {
+  <p>Laddar…</p>
+} @else if (suggestions().length === 0) {
+  <p>Inga väntande förslag.</p>
+} @else {
+  <ul class="suggestions">
+    @for (suggestion of suggestions(); track suggestion.id) {
+      <li class="suggestion-card">
+        <h2>{{ suggestion.question }}</h2>
+        <div class="answer-change">
+          <div><span>Nuvarande svar</span><strong>{{ suggestion.previousAnswer }}</strong></div>
+          <span class="arrow" aria-hidden="true">→</span>
+          <div><span>Föreslaget svar</span><strong>{{ suggestion.suggestedAnswer }}</strong></div>
+        </div>
+
+        @if (suggestion.reasoning) {
+          <p>{{ suggestion.reasoning }}</p>
+        }
+        @if (confidencePercent(suggestion.confidence); as confidence) {
+          <p class="meta">Säkerhet: {{ confidence }} %</p>
+        }
+        @if (suggestion.sources.length > 0) {
+          <p class="sources">
+            Källor:
+            @for (source of suggestion.sources; track source) {
+              <a [href]="source" target="_blank" rel="noopener noreferrer">{{ source }}</a>
+            }
+          </p>
+        }
+
+        <div class="actions">
+          <button
+            type="button"
+            class="btn btn-primary"
+            [disabled]="actionId() === suggestion.id"
+            (click)="approve(suggestion.id)"
+          >Godkänn</button>
+          <button
+            type="button"
+            class="btn btn-ghost"
+            [disabled]="actionId() === suggestion.id"
+            (click)="reject(suggestion.id)"
+          >Avvisa</button>
+        </div>
+      </li>
+    }
+  </ul>
+}

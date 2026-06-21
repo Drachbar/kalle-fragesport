@@ -1,9 +1,30 @@
 <div class="list-header">
   <h1>Frågor</h1>
   @if (auth.isAdmin()) {
-    <a class="btn btn-primary" routerLink="/questions/new">Ny fråga</a>
+    <div class="header-actions">
+      <a class="btn btn-ghost" routerLink="/questions/suggestions">Granska AI-förslag</a>
+      <button
+        type="button"
+        class="btn btn-ghost"
+        [disabled]="updating()"
+        (click)="startAutoUpdate()"
+      >
+        {{ updating() ? 'Uppdaterar…' : 'Auto-uppdatera svar' }}
+      </button>
+      <a class="btn btn-primary" routerLink="/questions/new">Ny fråga</a>
+    </div>
   }
 </div>
+
+@if (jobStatus(); as job) {
+  <p class="job-status" aria-live="polite">
+    @if (job.status === 'pending' || job.status === 'running') {
+      Bearbetar {{ job.processed }} av {{ job.total }} frågor…
+    } @else if (job.status === 'completed') {
+      Klart: {{ job.processed }} frågor granskades och {{ job.suggestionsCreated }} förslag skapades.
+    }
+  </p>
+}
 
 @if (actionError()) {
   <p role="alert" class="error">{{ actionError() }}</p>

@@ -9,6 +9,7 @@ import { of } from 'rxjs';
 import { QuestionList } from './question-list';
 import { QuestionsService, type Question } from '../questions.service';
 import { AuthService } from '../../auth/auth.service';
+import { JobStatusService } from '../job-status.service';
 
 function makeQuestion(over: Partial<Question> = {}): Question {
   return {
@@ -18,6 +19,7 @@ function makeQuestion(over: Partial<Question> = {}): Question {
     options: ['Stockholm', 'Oslo'],
     category: 'Geografi',
     type: 'multiple_choice',
+    autoUpdate: false,
     createdAt: '',
     updatedAt: '',
     ...over,
@@ -33,6 +35,8 @@ function tick(): Promise<void> {
 function configure(options: {
   isAdmin: boolean;
   del?: ReturnType<typeof vi.fn>;
+  service?: Record<string, unknown>;
+  jobStatusService?: Record<string, unknown>;
 }) {
   const del = options.del ?? vi.fn(() => of(undefined));
   TestBed.configureTestingModule({
@@ -41,7 +45,14 @@ function configure(options: {
       provideRouter([]),
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: QuestionsService, useValue: { delete: del } },
+      {
+        provide: QuestionsService,
+        useValue: { delete: del, ...options.service },
+      },
+      {
+        provide: JobStatusService,
+        useValue: { watch: vi.fn(), ...options.jobStatusService },
+      },
       { provide: AuthService, useValue: { isAdmin: () => options.isAdmin } },
     ],
   });
@@ -109,5 +120,47 @@ describe('QuestionList', () => {
     await tick();
     fixture.detectChanges();
     expect(el.textContent).not.toContain('Sveriges huvudstad?');
+  });
+
+  it('startar AI-uppdatering och visar resultatet när jobbet är klart', async () => {
+    const startAutoUpdate = vi.fn(() => of({ jobId: 'job-1' }));
+    const watch = vi.fn(() =>
+      of({
+        id: 'job-1',
+        status: 'completed' as const,
+        total: 2,
+        processed: 2,
+        suggestionsCreated: 1,
+        error: null,
+      }),
+    );
+    const { http } = configure({
+      isAdmin: true,
+      service: { startAutoUpdate },
+      jobStatusService: { watch },
+    });
+    const fixture = await setup(http, [makeQuestion({ autoUpdate: true })]);
+    const el = fixture.nativeElement as HTMLElement;
+
+    const btn = Array.from(el.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Auto-uppdatera svar'),
+    ) as HTMLButtonElement;
+    btn.click();
+    fixture.detectChanges();
+    await tick();
+    fixture.detectChanges();
+
+    expect(startAutoUpdate).toHaveBeenCalledOnce();
+    expect(watch).toHaveBeenCalledWith('job-1');
+    expect(el.textContent).toContain('1');
+  });
+
+  it('döljer AI-knappen för icke-admin', async () => {
+    const { http } = configure({ isAdmin: false });
+    const fixture = await setup(http, [makeQuestion()]);
+
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain(
+      'Auto-uppdatera svar',
+    );
   });
 });

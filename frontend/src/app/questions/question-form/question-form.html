@@ -46,6 +46,13 @@
     <input id="q-category" formControlName="category" />
   </div>
 
+  <div class="field field-checkbox">
+    <input id="q-auto-update" type="checkbox" formControlName="autoUpdate" />
+    <label for="q-auto-update">
+      Tidskänslig fråga – låt AI:n hålla svaret uppdaterat
+    </label>
+  </div>
+
   <fieldset class="field options" formArrayName="options">
     <legend>Svarsalternativ</legend>
     @for (ctrl of options.controls; track $index) {

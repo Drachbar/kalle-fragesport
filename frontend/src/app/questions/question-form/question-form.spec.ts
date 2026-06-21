@@ -12,6 +12,7 @@ function makeQuestion(over: Partial<Question> = {}): Question {
     options: ['Stockholm', 'Oslo'],
     category: 'Geografi',
     type: 'multiple_choice',
+    autoUpdate: false,
     createdAt: '',
     updatedAt: '',
     ...over,
@@ -67,8 +68,30 @@ describe('QuestionForm (skapa)', () => {
       type: 'multiple_choice',
       category: null,
       options: [],
+      autoUpdate: false,
     });
     expect(navigate).toHaveBeenCalledWith('/questions');
+  });
+
+  it('skickar autoUpdate=true när tidskänslig-rutan är ikryssad', async () => {
+    const service = configure(null);
+    const fixture = TestBed.createComponent(QuestionForm);
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+
+    setValue(el, '#q-question', 'Hur många mål i VM?');
+    setValue(el, '#q-answer', '7');
+    const checkbox = el.querySelector('#q-auto-update') as HTMLInputElement;
+    checkbox.click();
+    (el.querySelector('form') as HTMLFormElement).dispatchEvent(
+      new Event('submit'),
+    );
+    await fixture.whenStable();
+
+    expect(service.create).toHaveBeenCalledWith(
+      expect.objectContaining({ autoUpdate: true }),
+    );
   });
 
   it('lägger till och fyller i ett svarsalternativ', async () => {

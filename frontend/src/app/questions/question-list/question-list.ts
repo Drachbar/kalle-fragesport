@@ -1,17 +1,23 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
+  DestroyRef,
   inject,
   signal,
 } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { httpResource } from '@angular/common/http';
+import { switchMap } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
 import {
   QuestionsService,
+  type AutoUpdateJobStatus,
   type Question,
   type QuestionType,
 } from '../questions.service';
+import { JobStatusService } from '../job-status.service';
 
 @Component({
   selector: 'app-question-list',
@@ -22,6 +28,8 @@ import {
 })
 export class QuestionList {
   private readonly questionsService = inject(QuestionsService);
+  private readonly jobStatusService = inject(JobStatusService);
+  private readonly destroyRef = inject(DestroyRef);
   protected readonly auth = inject(AuthService);
 
   // Reaktiv läsning av listan. .reload() hämtar om efter en borttagning.
@@ -31,6 +39,11 @@ export class QuestionList {
   );
 
   protected readonly actionError = signal<string | null>(null);
+  protected readonly jobStatus = signal<AutoUpdateJobStatus | null>(null);
+  protected readonly updating = computed(() => {
+    const status = this.jobStatus()?.status;
+    return status === 'pending' || status === 'running';
+  });
 
   private readonly typeLabels: Record<QuestionType, string> = {
     multiple_choice: 'Flerval',
@@ -51,5 +64,36 @@ export class QuestionList {
       next: () => this.questions.reload(),
       error: () => this.actionError.set('Kunde inte ta bort frågan'),
     });
+  }
+
+  protected startAutoUpdate(): void {
+    this.actionError.set(null);
+    this.jobStatus.set({
+      id: '',
+      status: 'pending',
+      total: 0,
+      processed: 0,
+      suggestionsCreated: 0,
+      error: null,
+    });
+
+    this.questionsService
+      .startAutoUpdate()
+      .pipe(
+        switchMap(({ jobId }) => this.jobStatusService.watch(jobId)),
+        takeUntilDestroyed(this.destroyRef),
+      )
+      .subscribe({
+        next: (job) => {
+          this.jobStatus.set(job);
+          if (job.status === 'failed') {
+            this.actionError.set(job.error ?? 'AI-uppdateringen misslyckades');
+          }
+        },
+        error: () => {
+          this.jobStatus.set(null);
+          this.actionError.set('Kunde inte starta AI-uppdateringen');
+        },
+      });
   }
 }

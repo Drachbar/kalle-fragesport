@@ -31,6 +31,14 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'questions/suggestions',
+    canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./questions/suggestion-review/suggestion-review').then(
+        (m) => m.SuggestionReview,
+      ),
+  },
+  {
     path: 'questions/:id/edit',
     canActivate: [adminGuard],
     loadComponent: () =>

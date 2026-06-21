@@ -27,6 +27,31 @@ describe("createQuestionSchema", () => {
     }
   });
 
+  it("sätter autoUpdate till false som standard", () => {
+    const result = createQuestionSchema.safeParse({
+      question: "Fråga?",
+      answer: "Svar",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.autoUpdate).toBe(false);
+    }
+  });
+
+  it("godkänner autoUpdate = true", () => {
+    const result = createQuestionSchema.safeParse({
+      question: "Hur många mål har spelaren gjort i VM?",
+      answer: "7",
+      autoUpdate: true,
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.autoUpdate).toBe(true);
+    }
+  });
+
   it("avvisar tom fråga", () => {
     const result = createQuestionSchema.safeParse({
       question: "",

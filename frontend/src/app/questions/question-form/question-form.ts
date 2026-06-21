@@ -48,6 +48,7 @@ export class QuestionForm implements OnInit {
       Validators.required,
     ),
     category: [''],
+    autoUpdate: [false],
     options: new FormArray<FormControl<string>>([]),
   });
 
@@ -67,6 +68,7 @@ export class QuestionForm implements OnInit {
         answer: question.answer,
         type: question.type,
         category: question.category ?? '',
+        autoUpdate: question.autoUpdate,
       });
       this.options.clear();
       for (const option of question.options) {
@@ -108,6 +110,7 @@ export class QuestionForm implements OnInit {
       answer: raw.answer.trim(),
       type: raw.type,
       category: category.length > 0 ? category : null,
+      autoUpdate: raw.autoUpdate,
       options: raw.options
         .map((option) => option.trim())
         .filter((option) => option.length > 0),

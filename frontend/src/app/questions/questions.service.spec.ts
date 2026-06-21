@@ -18,6 +18,7 @@ function makeQuestion(over: Partial<Question> = {}): Question {
     options: ['Stockholm', 'Oslo'],
     category: 'Geografi',
     type: 'multiple_choice',
+    autoUpdate: false,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     ...over,
@@ -30,6 +31,7 @@ const input: QuestionInput = {
   options: ['a', 'b'],
   category: null,
   type: 'multiple_choice',
+  autoUpdate: false,
 };
 
 describe('QuestionsService', () => {
@@ -102,5 +104,72 @@ describe('QuestionsService', () => {
     expect(req.request.method).toBe('DELETE');
     expect(req.request.withCredentials).toBe(true);
     req.flush(null);
+  });
+
+  it('startAutoUpdate POST:ar och returnerar jobId', () => {
+    let jobId: string | undefined;
+    service.startAutoUpdate().subscribe((r) => (jobId = r.jobId));
+
+    const req = httpMock.expectOne('/api/questions/auto-update');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.withCredentials).toBe(true);
+    req.flush({ jobId: 'job-1' });
+
+    expect(jobId).toBe('job-1');
+  });
+
+  it('getAutoUpdateStatus hämtar status för ett jobb', () => {
+    service.getAutoUpdateStatus('job-1').subscribe();
+    const req = httpMock.expectOne('/api/questions/auto-update/job-1');
+    expect(req.request.method).toBe('GET');
+    expect(req.request.withCredentials).toBe(true);
+    req.flush({
+      id: 'job-1',
+      status: 'running',
+      total: 3,
+      processed: 1,
+      suggestionsCreated: 0,
+      error: null,
+    });
+  });
+
+  it('listSuggestions hämtar väntande förslag', () => {
+    let result: unknown[] | undefined;
+    service.listSuggestions().subscribe((s) => (result = s));
+
+    const req = httpMock.expectOne('/api/questions/suggestions');
+    expect(req.request.method).toBe('GET');
+    req.flush([
+      {
+        id: 's-1',
+        questionId: 'q-1',
+        question: 'Hur många mål?',
+        previousAnswer: '7',
+        suggestedAnswer: '8',
+        sources: [],
+        reasoning: null,
+        confidence: 0.9,
+        status: 'pending',
+        createdAt: '2026-01-01T00:00:00.000Z',
+      },
+    ]);
+
+    expect(result).toHaveLength(1);
+  });
+
+  it('approveSuggestion POST:ar till approve-url', () => {
+    service.approveSuggestion('s-1').subscribe();
+    const req = httpMock.expectOne('/api/questions/suggestions/s-1/approve');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.withCredentials).toBe(true);
+    req.flush({ id: 's-1', status: 'approved' });
+  });
+
+  it('rejectSuggestion POST:ar till reject-url', () => {
+    service.rejectSuggestion('s-1').subscribe();
+    const req = httpMock.expectOne('/api/questions/suggestions/s-1/reject');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.withCredentials).toBe(true);
+    req.flush({ id: 's-1', status: 'rejected' });
   });
 });

@@ -7,6 +7,7 @@ export interface Question {
   options: string[];
   category: string | null;
   type: QuestionType;
+  autoUpdate: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -17,4 +18,5 @@ export interface QuestionInput {
   options: string[];
   category: string | null;
   type: QuestionType;
+  autoUpdate: boolean;
 }

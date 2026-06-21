@@ -1,0 +1,78 @@
+.review-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.review-header h1,
+.review-header p {
+  margin-top: 0;
+}
+
+.suggestions {
+  display: grid;
+  gap: 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.suggestion-card {
+  padding: 1.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+.suggestion-card h2 {
+  margin-top: 0;
+  font-size: 1.1rem;
+}
+
+.answer-change {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 1rem;
+}
+
+.answer-change div {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  background: var(--bg);
+  border-radius: var(--radius-lg);
+}
+
+.answer-change span,
+.meta {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.arrow {
+  font-size: 1.5rem;
+}
+
+.sources {
+  display: grid;
+  gap: 0.25rem;
+  overflow-wrap: anywhere;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 600px) {
+  .review-header,
+  .answer-change {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

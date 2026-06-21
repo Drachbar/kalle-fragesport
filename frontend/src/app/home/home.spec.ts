@@ -11,6 +11,7 @@ function makeQuestion(over: Partial<Question> = {}): Question {
     options: ['Stockholm', 'Oslo'],
     category: 'Geografi',
     type: 'multiple_choice',
+    autoUpdate: false,
     createdAt: '',
     updatedAt: '',
     ...over,

@@ -11,6 +11,7 @@ export interface Question {
   options: string[];
   category: string | null;
   type: QuestionType;
+  autoUpdate: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -21,6 +22,31 @@ export interface QuestionInput {
   options: string[];
   category: string | null;
   type: QuestionType;
+  autoUpdate: boolean;
+}
+
+export type JobStatus = 'pending' | 'running' | 'completed' | 'failed';
+
+export interface AutoUpdateJobStatus {
+  id: string;
+  status: JobStatus;
+  total: number;
+  processed: number;
+  suggestionsCreated: number;
+  error: string | null;
+}
+
+export interface PendingSuggestion {
+  id: string;
+  questionId: string;
+  question: string;
+  previousAnswer: string;
+  suggestedAnswer: string;
+  sources: string[];
+  reasoning: string | null;
+  confidence: number | null;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -61,5 +87,45 @@ export class QuestionsService {
     return this.http.delete<void>(`${this.baseUrl}/${id}`, {
       withCredentials: true,
     });
+  }
+
+  /** Startar ett AI-jobb som söker upp aktuella svar för tidskänsliga frågor. */
+  startAutoUpdate(): Observable<{ jobId: string }> {
+    return this.http.post<{ jobId: string }>(
+      `${this.baseUrl}/auto-update`,
+      {},
+      { withCredentials: true },
+    );
+  }
+
+  /** Hämtar status/progress för ett pågående jobb. */
+  getAutoUpdateStatus(jobId: string): Observable<AutoUpdateJobStatus> {
+    return this.http.get<AutoUpdateJobStatus>(
+      `${this.baseUrl}/auto-update/${jobId}`,
+      { withCredentials: true },
+    );
+  }
+
+  /** Listar förslag som väntar på granskning. */
+  listSuggestions(): Observable<PendingSuggestion[]> {
+    return this.http.get<PendingSuggestion[]>(`${this.baseUrl}/suggestions`, {
+      withCredentials: true,
+    });
+  }
+
+  approveSuggestion(id: string): Observable<void> {
+    return this.http.post<void>(
+      `${this.baseUrl}/suggestions/${id}/approve`,
+      {},
+      { withCredentials: true },
+    );
+  }
+
+  rejectSuggestion(id: string): Observable<void> {
+    return this.http.post<void>(
+      `${this.baseUrl}/suggestions/${id}/reject`,
+      {},
+      { withCredentials: true },
+    );
   }
 }
