@@ -23,7 +23,9 @@
     [attr.aria-invalid]="isInvalid('password')"
   />
 
-  <button type="submit" [disabled]="submitting()">Logga in</button>
+  <button type="submit" class="btn btn-primary" [disabled]="submitting()">
+    Logga in
+  </button>
 </form>
 
 <p>Har du inget konto? <a routerLink="/register">Skapa konto</a></p>

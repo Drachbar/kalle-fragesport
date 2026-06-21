@@ -25,7 +25,9 @@
   />
   <p id="register-password-hint">Minst 8 tecken.</p>
 
-  <button type="submit" [disabled]="submitting()">Skapa konto</button>
+  <button type="submit" class="btn btn-primary" [disabled]="submitting()">
+    Skapa konto
+  </button>
 </form>
 
 <p>Har du redan ett konto? <a routerLink="/login">Logga in</a></p>

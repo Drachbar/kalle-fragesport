@@ -1,0 +1,12 @@
+:host {
+  display: block;
+  max-width: 640px;
+}
+
+h1 {
+  font-size: 2rem;
+}
+
+p {
+  color: var(--muted);
+}

@@ -1,16 +1,20 @@
-<header>
-  <nav aria-label="Huvudmeny">
-    <a routerLink="/">Hem</a>
-    @if (auth.isLoggedIn()) {
-      <span>{{ auth.currentUser()?.email }}</span>
-      <button type="button" (click)="logout()">Logga ut</button>
-    } @else {
-      <a routerLink="/login">Logga in</a>
-      <a routerLink="/register">Skapa konto</a>
-    }
+<header class="app-header">
+  <nav class="app-nav" aria-label="Huvudmeny">
+    <a class="brand" routerLink="/">Kalle Frågesport</a>
+    <div class="nav-actions">
+      @if (auth.isLoggedIn()) {
+        <span class="user">{{ auth.currentUser()?.email }}</span>
+        <button type="button" class="btn btn-ghost" (click)="logout()">
+          Logga ut
+        </button>
+      } @else {
+        <a routerLink="/login">Logga in</a>
+        <a class="btn btn-primary" routerLink="/register">Skapa konto</a>
+      }
+    </div>
   </nav>
 </header>
 
-<main>
+<main class="app-main">
   <router-outlet />
 </main>
