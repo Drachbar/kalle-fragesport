@@ -32,6 +32,7 @@ function mapRow(row: QuestionRow): Question {
 export interface QuestionsRepository {
   list(): Promise<Question[]>;
   getById(id: string): Promise<Question | null>;
+  random(): Promise<Question | null>;
   create(input: QuestionInput): Promise<Question>;
   update(id: string, input: QuestionInput): Promise<Question | null>;
   remove(id: string): Promise<boolean>;
@@ -49,6 +50,14 @@ export const questionsRepository: QuestionsRepository = {
     const result = await getDatabase().query<QuestionRow>(
       `SELECT ${SELECT_COLUMNS} FROM questions WHERE id = $1`,
       [id],
+    );
+    const row = result.rows[0];
+    return row ? mapRow(row) : null;
+  },
+
+  async random() {
+    const result = await getDatabase().query<QuestionRow>(
+      `SELECT ${SELECT_COLUMNS} FROM questions ORDER BY random() LIMIT 1`,
     );
     const row = result.rows[0];
     return row ? mapRow(row) : null;

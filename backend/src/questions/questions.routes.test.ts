@@ -24,6 +24,7 @@ function fakeRepo(over: Partial<QuestionsRepository> = {}): QuestionsRepository 
   return {
     list: vi.fn().mockResolvedValue([makeQuestion()]),
     getById: vi.fn().mockResolvedValue(makeQuestion()),
+    random: vi.fn().mockResolvedValue(makeQuestion()),
     create: vi.fn().mockResolvedValue(makeQuestion()),
     update: vi.fn().mockResolvedValue(makeQuestion()),
     remove: vi.fn().mockResolvedValue(true),
@@ -64,6 +65,24 @@ describe("GET /questions (publikt)", () => {
     const res = await request(app).get("/questions/saknas");
 
     expect(res.status).toBe(404);
+  });
+});
+
+describe("GET /questions/random (publikt)", () => {
+  it("returnerar en slumpmässig fråga", async () => {
+    const repo = fakeRepo();
+    const res = await request(makeApp(repo)).get("/questions/random");
+
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe("q-1");
+    expect(repo.random).toHaveBeenCalledOnce();
+  });
+
+  it("svarar 204 när det inte finns några frågor", async () => {
+    const repo = fakeRepo({ random: vi.fn().mockResolvedValue(null) });
+    const res = await request(makeApp(repo)).get("/questions/random");
+
+    expect(res.status).toBe(204);
   });
 });
 

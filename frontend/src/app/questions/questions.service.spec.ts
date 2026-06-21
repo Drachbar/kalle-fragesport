@@ -68,6 +68,17 @@ describe('QuestionsService', () => {
     req.flush(makeQuestion());
   });
 
+  it('random hämtar en slumpmässig fråga', () => {
+    let result: Question | null | undefined;
+    service.random().subscribe((q) => (result = q));
+
+    const req = httpMock.expectOne('/api/questions/random');
+    expect(req.request.method).toBe('GET');
+    req.flush(makeQuestion());
+
+    expect(result?.id).toBe('q-1');
+  });
+
   it('create postar med credentials', () => {
     service.create(input).subscribe();
     const req = httpMock.expectOne('/api/questions');

@@ -38,6 +38,13 @@ export class QuestionsService {
     });
   }
 
+  /** En slumpmässig fråga, eller null om databasen är tom (HTTP 204). */
+  random(): Observable<Question | null> {
+    return this.http.get<Question | null>(`${this.baseUrl}/random`, {
+      withCredentials: true,
+    });
+  }
+
   create(input: QuestionInput): Observable<Question> {
     return this.http.post<Question>(this.baseUrl, input, {
       withCredentials: true,

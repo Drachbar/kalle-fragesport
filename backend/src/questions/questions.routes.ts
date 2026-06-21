@@ -19,6 +19,16 @@ export function createQuestionsRouter(
     res.json(await repo.list());
   });
 
+  // En slumpmässig fråga (publik). Måste ligga före "/:id".
+  router.get("/random", async (_req, res) => {
+    const question = await repo.random();
+    if (!question) {
+      res.status(204).end();
+      return;
+    }
+    res.json(question);
+  });
+
   router.get("/:id", async (req, res) => {
     const question = await repo.getById(req.params.id);
     if (!question) {

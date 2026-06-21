@@ -1,10 +1,41 @@
 <h1>Kalle Frågesport</h1>
 
-@if (auth.isLoggedIn()) {
-  <p>Inloggad som {{ auth.currentUser()?.email }} ({{ auth.currentUser()?.role }}).</p>
+@if (error()) {
+  <p role="alert" class="error">{{ error() }}</p>
+} @else if (loading()) {
+  <p>Laddar…</p>
+} @else if (current(); as q) {
+  <article class="quiz-card">
+    <p class="question">{{ q.question }}</p>
+
+    @if (q.options.length) {
+      <ul class="options">
+        @for (opt of q.options; track opt) {
+          <li>{{ opt }}</li>
+        }
+      </ul>
+    }
+
+    @if (showAnswer()) {
+      <p class="answer" aria-live="polite">
+        <strong>Rätt svar:</strong> {{ q.answer }}
+      </p>
+    }
+
+    <div class="quiz-actions">
+      <button
+        type="button"
+        class="btn btn-primary"
+        (click)="reveal()"
+        [disabled]="showAnswer()"
+      >
+        Visa svar
+      </button>
+      <button type="button" class="btn btn-ghost" (click)="next()">
+        Nästa fråga
+      </button>
+    </div>
+  </article>
 } @else {
-  <p>
-    <a routerLink="/login">Logga in</a> eller
-    <a routerLink="/register">skapa ett konto</a> för att komma igång.
-  </p>
+  <p>Inga frågor än.</p>
 }
