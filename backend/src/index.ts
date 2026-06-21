@@ -45,8 +45,9 @@ app.get("/health", (_req: Request, res: Response) => {
   res.json({ status: "ok" });
 });
 
-app.use("/auth", createAuthRouter());
-app.use("/questions", createQuestionsRouter());
+// API:t exponeras under /api (matchar frontends proxy.conf.json).
+app.use("/api/auth", createAuthRouter());
+app.use("/api/questions", createQuestionsRouter());
 
 async function start(): Promise<void> {
   await runMigrations();
