@@ -4,10 +4,7 @@ export interface QueryResult<T> {
   rowCount: number;
 }
 
-/**
- * Databasabstraktion som både riktig Postgres (pg) och PGlite implementerar.
- * SQL-dialekten är densamma (Postgres) – bara körningen skiljer.
- */
+/** Tunn abstraktion över databasen (node-postgres). */
 export interface Database {
   query<T = Record<string, unknown>>(
     text: string,
@@ -18,8 +15,8 @@ export interface Database {
   exec(sql: string): Promise<void>;
 
   /**
-   * Kör fn med garanti att inga andra processer migrerar samtidigt.
-   * För pg används ett advisory lock; PGlite är enprocessigt och kör direkt.
+   * Kör fn med garanti att inga andra instanser migrerar samtidigt
+   * (Postgres advisory lock).
    */
   runExclusive<T>(fn: () => Promise<T>): Promise<T>;
 

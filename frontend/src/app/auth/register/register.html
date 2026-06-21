@@ -1,0 +1,31 @@
+<h1>Skapa konto</h1>
+
+<form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  @if (error()) {
+    <p role="alert" class="error">{{ error() }}</p>
+  }
+
+  <label for="register-email">E-post</label>
+  <input
+    id="register-email"
+    type="email"
+    autocomplete="email"
+    formControlName="email"
+    [attr.aria-invalid]="isInvalid('email')"
+  />
+
+  <label for="register-password">Lösenord (minst 8 tecken)</label>
+  <input
+    id="register-password"
+    type="password"
+    autocomplete="new-password"
+    formControlName="password"
+    aria-describedby="register-password-hint"
+    [attr.aria-invalid]="isInvalid('password')"
+  />
+  <p id="register-password-hint">Minst 8 tecken.</p>
+
+  <button type="submit" [disabled]="submitting()">Skapa konto</button>
+</form>
+
+<p>Har du redan ett konto? <a routerLink="/login">Logga in</a></p>

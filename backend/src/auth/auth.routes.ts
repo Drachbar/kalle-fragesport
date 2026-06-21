@@ -5,6 +5,7 @@ import {
   loginUser as defaultLoginUser,
   EmailAlreadyInUseError,
 } from "./auth.service";
+import { usersRepository } from "../users/users.repository";
 
 const registerSchema = z.object({
   email: z.email(),
@@ -19,11 +20,13 @@ const loginSchema = z.object({
 export interface AuthRouterDeps {
   registerUser: typeof defaultRegisterUser;
   loginUser: typeof defaultLoginUser;
+  findUserById: typeof usersRepository.findUserById;
 }
 
 const defaultDeps: AuthRouterDeps = {
   registerUser: defaultRegisterUser,
   loginUser: defaultLoginUser,
+  findUserById: (id) => usersRepository.findUserById(id),
 };
 
 export function createAuthRouter(deps: AuthRouterDeps = defaultDeps): Router {
@@ -86,6 +89,26 @@ export function createAuthRouter(deps: AuthRouterDeps = defaultDeps): Router {
       res.clearCookie("connect.sid");
       res.status(204).end();
     });
+  });
+
+  // Aktuell inloggad användare – låter frontend återställa auth-state efter
+  // sidladdning (cookien är httpOnly och kan inte läsas i JS).
+  router.get("/me", async (req, res) => {
+    const userId = req.session.userId;
+    if (!userId) {
+      res.status(401).json({ error: "Inte inloggad" });
+      return;
+    }
+
+    const user = await deps.findUserById(userId);
+    if (!user) {
+      // Sessionen pekar på en borttagen användare – städa upp.
+      req.session.destroy(() => undefined);
+      res.status(401).json({ error: "Inte inloggad" });
+      return;
+    }
+
+    res.json({ id: user.id, email: user.email, role: user.role });
   });
 
   return router;

@@ -1,0 +1,10 @@
+<h1>Kalle Frågesport</h1>
+
+@if (auth.isLoggedIn()) {
+  <p>Inloggad som {{ auth.currentUser()?.email }} ({{ auth.currentUser()?.role }}).</p>
+} @else {
+  <p>
+    <a routerLink="/login">Logga in</a> eller
+    <a routerLink="/register">skapa ett konto</a> för att komma igång.
+  </p>
+}

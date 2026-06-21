@@ -8,7 +8,6 @@ type GetCallback = (err: unknown, session?: SessionData | null) => void;
 
 /**
  * express-session-store mot vår databasabstraktion och `session`-tabellen.
- * Fungerar med både PGlite och riktig Postgres (samma SQL).
  */
 export class DbSessionStore extends Store {
   private readonly db: Database;

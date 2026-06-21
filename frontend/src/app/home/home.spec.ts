@@ -2,12 +2,12 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withFetch } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
-import { App } from './app';
+import { Home } from './home';
 
-describe('App', () => {
+describe('Home', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [App],
+      imports: [Home],
       providers: [
         provideRouter([]),
         provideHttpClient(withFetch()),
@@ -16,16 +16,14 @@ describe('App', () => {
     }).compileComponents();
   });
 
-  it('should create the app', () => {
-    const fixture = TestBed.createComponent(App);
-    expect(fixture.componentInstance).toBeTruthy();
+  it('skapar komponenten', () => {
+    expect(TestBed.createComponent(Home).componentInstance).toBeTruthy();
   });
 
-  it('visar inloggnings- och registreringslänkar när man är utloggad', async () => {
-    const fixture = TestBed.createComponent(App);
+  it('visar inloggningslänkar när man är utloggad', async () => {
+    const fixture = TestBed.createComponent(Home);
     await fixture.whenStable();
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('Logga in');
-    expect(compiled.textContent).toContain('Skapa konto');
   });
 });

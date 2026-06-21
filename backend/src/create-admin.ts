@@ -21,7 +21,7 @@ async function main(): Promise<void> {
     return;
   }
 
-  // Säkerställ att schemat finns (viktigt vid en färsk PGlite-databas).
+  // Säkerställ att schemat finns (viktigt vid en färsk databas).
   await runMigrations();
 
   const passwordHash = await hashPassword(password);

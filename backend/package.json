@@ -18,7 +18,6 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@electric-sql/pglite": "^0.5.3",
     "bcrypt": "^6.0.0",
     "express": "^5.2.1",
     "express-session": "^1.19.0",

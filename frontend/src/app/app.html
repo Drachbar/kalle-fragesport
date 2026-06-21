@@ -1,0 +1,16 @@
+<header>
+  <nav aria-label="Huvudmeny">
+    <a routerLink="/">Hem</a>
+    @if (auth.isLoggedIn()) {
+      <span>{{ auth.currentUser()?.email }}</span>
+      <button type="button" (click)="logout()">Logga ut</button>
+    } @else {
+      <a routerLink="/login">Logga in</a>
+      <a routerLink="/register">Skapa konto</a>
+    }
+  </nav>
+</header>
+
+<main>
+  <router-outlet />
+</main>

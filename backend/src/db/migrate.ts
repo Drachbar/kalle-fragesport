@@ -5,9 +5,8 @@ import { getDatabase, type Database } from "./index";
 /**
  * Kör databasmigreringar med Postgrator mot målversionen (default: senaste).
  *
- * Fungerar mot både PGlite och riktig Postgres via databasabstraktionen.
- * Körs under runExclusive så att samtidig uppstart av flera instanser (pg)
- * inte racear migreringarna.
+ * Körs under runExclusive (advisory lock) så att samtidig uppstart av flera
+ * instanser inte racear migreringarna.
  *
  * @param target Versionsnummer att migrera till, t.ex. "002". "000" rullar
  *               tillbaka allt. Utelämnas för senaste versionen.
@@ -19,9 +18,9 @@ export async function runMigrations(
   return database.runExclusive(async () => {
     const postgrator = new Postgrator({
       driver: "pg",
-      // Inget `database`: Postgrator filtrerar annars sin "finns tabellen?"-koll
-      // på table_catalog = <database>, vilket inte matchar PGlite:s faktiska
-      // databasnamn. information_schema innehåller ändå bara aktuell databas.
+      // Inget `database` behövs: information_schema innehåller bara den aktuella
+      // databasen, så Postgrators "finns tabellen?"-koll fungerar utan ett
+      // table_catalog-filter.
       migrationPattern: path.join(__dirname, "..", "..", "migrations", "*"),
       schemaTable: "schemaversion",
       execQuery: (query) => database.query(query),

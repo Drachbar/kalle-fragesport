@@ -29,6 +29,7 @@ function makeApp(deps: Partial<AuthRouterDeps>) {
     createAuthRouter({
       registerUser: deps.registerUser ?? vi.fn(),
       loginUser: deps.loginUser ?? vi.fn(),
+      findUserById: deps.findUserById ?? vi.fn(),
     }),
   );
   return app;
@@ -107,5 +108,30 @@ describe("POST /auth/logout", () => {
     const res = await request(app).post("/auth/logout");
 
     expect(res.status).toBe(204);
+  });
+});
+
+describe("GET /auth/me", () => {
+  it("svarar 401 när ingen är inloggad", async () => {
+    const res = await request(makeApp({})).get("/auth/me");
+
+    expect(res.status).toBe(401);
+  });
+
+  it("returnerar inloggad användare efter login", async () => {
+    const user = makeUser({ role: "admin" });
+    const app = makeApp({
+      loginUser: vi.fn().mockResolvedValue(user),
+      findUserById: vi.fn().mockResolvedValue(user),
+    });
+    const agent = request.agent(app);
+
+    await agent
+      .post("/auth/login")
+      .send({ email: "kalle@post.se", password: "hemligt123" });
+    const res = await agent.get("/auth/me");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ email: "kalle@post.se", role: "admin" });
   });
 });
