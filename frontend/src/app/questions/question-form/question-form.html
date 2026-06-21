@@ -1,0 +1,77 @@
+<h1>{{ id() ? 'Redigera fråga' : 'Ny fråga' }}</h1>
+
+<form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+  @if (error()) {
+    <p role="alert" class="error">{{ error() }}</p>
+  }
+
+  <div class="field">
+    <label for="q-question">Fråga</label>
+    <textarea
+      id="q-question"
+      rows="2"
+      formControlName="question"
+      [attr.aria-invalid]="isInvalid('question')"
+      aria-describedby="q-question-error"
+    ></textarea>
+    @if (errorFor('question'); as msg) {
+      <p id="q-question-error" role="alert" class="field-error">{{ msg }}</p>
+    }
+  </div>
+
+  <div class="field">
+    <label for="q-answer">Rätt svar</label>
+    <input
+      id="q-answer"
+      formControlName="answer"
+      [attr.aria-invalid]="isInvalid('answer')"
+      aria-describedby="q-answer-error"
+    />
+    @if (errorFor('answer'); as msg) {
+      <p id="q-answer-error" role="alert" class="field-error">{{ msg }}</p>
+    }
+  </div>
+
+  <div class="field">
+    <label for="q-type">Typ</label>
+    <select id="q-type" formControlName="type">
+      <option value="multiple_choice">Flerval</option>
+      <option value="free_text">Fritext</option>
+      <option value="true_false">Sant/falskt</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label for="q-category">Kategori (valfritt)</label>
+    <input id="q-category" formControlName="category" />
+  </div>
+
+  <fieldset class="field options" formArrayName="options">
+    <legend>Svarsalternativ</legend>
+    @for (ctrl of options.controls; track $index) {
+      <div class="option-row">
+        <label class="visually-hidden" [attr.for]="'q-option-' + $index">
+          Alternativ {{ $index + 1 }}
+        </label>
+        <input [id]="'q-option-' + $index" [formControlName]="$index" />
+        <button
+          type="button"
+          class="btn btn-ghost"
+          (click)="removeOption($index)"
+        >
+          Ta bort
+        </button>
+      </div>
+    }
+    <button type="button" class="btn btn-ghost" (click)="addOption()">
+      Lägg till alternativ
+    </button>
+  </fieldset>
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary" [disabled]="submitting()">
+      Spara
+    </button>
+    <a class="btn btn-ghost" routerLink="/questions">Avbryt</a>
+  </div>
+</form>

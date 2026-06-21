@@ -5,23 +5,35 @@
     <p role="alert" class="error">{{ error() }}</p>
   }
 
-  <label for="login-email">E-post</label>
-  <input
-    id="login-email"
-    type="email"
-    autocomplete="email"
-    formControlName="email"
-    [attr.aria-invalid]="isInvalid('email')"
-  />
+  <div class="field">
+    <label for="login-email">E-post</label>
+    <input
+      id="login-email"
+      type="email"
+      autocomplete="email"
+      formControlName="email"
+      [attr.aria-invalid]="isInvalid('email')"
+      aria-describedby="login-email-error"
+    />
+    @if (errorFor('email'); as msg) {
+      <p id="login-email-error" role="alert" class="field-error">{{ msg }}</p>
+    }
+  </div>
 
-  <label for="login-password">Lösenord</label>
-  <input
-    id="login-password"
-    type="password"
-    autocomplete="current-password"
-    formControlName="password"
-    [attr.aria-invalid]="isInvalid('password')"
-  />
+  <div class="field">
+    <label for="login-password">Lösenord</label>
+    <input
+      id="login-password"
+      type="password"
+      autocomplete="current-password"
+      formControlName="password"
+      [attr.aria-invalid]="isInvalid('password')"
+      aria-describedby="login-password-error"
+    />
+    @if (errorFor('password'); as msg) {
+      <p id="login-password-error" role="alert" class="field-error">{{ msg }}</p>
+    }
+  </div>
 
   <button type="submit" class="btn btn-primary" [disabled]="submitting()">
     Logga in

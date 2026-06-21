@@ -1,6 +1,9 @@
 <header class="app-header">
   <nav class="app-nav" aria-label="Huvudmeny">
-    <a class="brand" routerLink="/">Kalle Frågesport</a>
+    <div class="nav-left">
+      <a class="brand" routerLink="/">Kalle Frågesport</a>
+      <a routerLink="/questions">Frågor</a>
+    </div>
     <div class="nav-actions">
       @if (auth.isLoggedIn()) {
         <span class="user">{{ auth.currentUser()?.email }}</span>

@@ -1,0 +1,51 @@
+<div class="list-header">
+  <h1>Frågor</h1>
+  @if (auth.isAdmin()) {
+    <a class="btn btn-primary" routerLink="/questions/new">Ny fråga</a>
+  }
+</div>
+
+@if (error()) {
+  <p role="alert" class="error">{{ error() }}</p>
+}
+
+@if (loading()) {
+  <p>Laddar…</p>
+} @else if (questions().length === 0) {
+  <p>Inga frågor än.</p>
+} @else {
+  <ul class="question-list">
+    @for (q of questions(); track q.id) {
+      <li class="question-card">
+        <div class="question-main">
+          <h2>{{ q.question }}</h2>
+          <p class="meta">
+            @if (q.category) {
+              <span class="tag">{{ q.category }}</span>
+            }
+            <span class="tag">{{ typeLabel(q.type) }}</span>
+          </p>
+          <p class="answer">Rätt svar: {{ q.answer }}</p>
+          @if (q.options.length) {
+            <ul class="options">
+              @for (opt of q.options; track opt) {
+                <li>{{ opt }}</li>
+              }
+            </ul>
+          }
+        </div>
+
+        @if (auth.isAdmin()) {
+          <div class="actions">
+            <a class="btn btn-ghost" [routerLink]="['/questions', q.id, 'edit']">
+              Redigera
+            </a>
+            <button type="button" class="btn btn-ghost" (click)="remove(q)">
+              Ta bort
+            </button>
+          </div>
+        }
+      </li>
+    }
+  </ul>
+}

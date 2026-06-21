@@ -28,6 +28,12 @@
   text-decoration: none;
 }
 
+.nav-left {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
 .nav-actions {
   display: flex;
   align-items: center;

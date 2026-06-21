@@ -41,6 +41,19 @@ describe('Login', () => {
     expect(auth.login).not.toHaveBeenCalled();
   });
 
+  it('visar valideringsfel vid tomt formulär', async () => {
+    const fixture = TestBed.createComponent(Login);
+    await fixture.whenStable();
+
+    const el = fixture.nativeElement as HTMLElement;
+    (el.querySelector('form') as HTMLFormElement).dispatchEvent(
+      new Event('submit'),
+    );
+    await fixture.whenStable();
+
+    expect(el.textContent).toContain('Fältet är obligatoriskt');
+  });
+
   it('loggar in och navigerar vid giltigt formulär', async () => {
     const fixture = TestBed.createComponent(Login);
     await fixture.whenStable();

@@ -9,6 +9,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { switchMap } from 'rxjs';
 import { AuthService } from '../auth.service';
+import { controlError } from '../../shared/form-errors';
 
 @Component({
   selector: 'app-register',
@@ -32,6 +33,10 @@ export class Register {
   protected isInvalid(control: 'email' | 'password'): boolean {
     const c = this.form.controls[control];
     return c.invalid && c.touched;
+  }
+
+  protected errorFor(control: 'email' | 'password'): string | null {
+    return controlError(this.form.controls[control]);
   }
 
   protected submit(): void {

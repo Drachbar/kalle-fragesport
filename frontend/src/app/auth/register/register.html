@@ -5,25 +5,38 @@
     <p role="alert" class="error">{{ error() }}</p>
   }
 
-  <label for="register-email">E-post</label>
-  <input
-    id="register-email"
-    type="email"
-    autocomplete="email"
-    formControlName="email"
-    [attr.aria-invalid]="isInvalid('email')"
-  />
+  <div class="field">
+    <label for="register-email">E-post</label>
+    <input
+      id="register-email"
+      type="email"
+      autocomplete="email"
+      formControlName="email"
+      [attr.aria-invalid]="isInvalid('email')"
+      aria-describedby="register-email-error"
+    />
+    @if (errorFor('email'); as msg) {
+      <p id="register-email-error" role="alert" class="field-error">{{ msg }}</p>
+    }
+  </div>
 
-  <label for="register-password">Lösenord (minst 8 tecken)</label>
-  <input
-    id="register-password"
-    type="password"
-    autocomplete="new-password"
-    formControlName="password"
-    aria-describedby="register-password-hint"
-    [attr.aria-invalid]="isInvalid('password')"
-  />
-  <p id="register-password-hint">Minst 8 tecken.</p>
+  <div class="field">
+    <label for="register-password">Lösenord (minst 8 tecken)</label>
+    <input
+      id="register-password"
+      type="password"
+      autocomplete="new-password"
+      formControlName="password"
+      aria-describedby="register-password-hint register-password-error"
+      [attr.aria-invalid]="isInvalid('password')"
+    />
+    <p id="register-password-hint">Minst 8 tecken.</p>
+    @if (errorFor('password'); as msg) {
+      <p id="register-password-error" role="alert" class="field-error">
+        {{ msg }}
+      </p>
+    }
+  </div>
 
   <button type="submit" class="btn btn-primary" [disabled]="submitting()">
     Skapa konto
