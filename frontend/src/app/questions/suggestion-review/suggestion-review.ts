@@ -32,6 +32,15 @@ export class SuggestionReview {
     return confidence === null ? null : Math.round(confidence * 100);
   }
 
+  protected optionsChanged(suggestion: PendingSuggestion): boolean {
+    return (
+      suggestion.previousOptions.length !== suggestion.suggestedOptions.length ||
+      suggestion.previousOptions.some(
+        (option, index) => option !== suggestion.suggestedOptions[index],
+      )
+    );
+  }
+
   protected approve(id: string): void {
     this.perform(id, () => this.questionsService.approveSuggestion(id));
   }

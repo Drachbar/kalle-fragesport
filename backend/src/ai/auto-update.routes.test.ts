@@ -43,6 +43,8 @@ function makeSuggestion(over: Partial<AnswerSuggestion> = {}): AnswerSuggestion 
     jobId: "job-1",
     previousAnswer: "7",
     suggestedAnswer: "8",
+    previousOptions: ["7", "6", "5"],
+    suggestedOptions: ["8", "7", "6"],
     sources: ["https://example.com"],
     reasoning: "Ett mål till.",
     confidence: 0.9,
@@ -193,7 +195,7 @@ describe("GET /questions/suggestions (admin)", () => {
 });
 
 describe("POST /questions/suggestions/:id/approve (admin)", () => {
-  it("uppdaterar frågans svar och markerar förslaget approved", async () => {
+  it("uppdaterar svar och alternativ samt markerar förslaget approved", async () => {
     const deps = makeDeps();
     const res = await request(makeApp(deps, adminSession)).post(
       "/questions/suggestions/s-1/approve",
@@ -202,7 +204,10 @@ describe("POST /questions/suggestions/:id/approve (admin)", () => {
     expect(res.status).toBe(200);
     expect(deps.questionsRepo.update).toHaveBeenCalledWith(
       "q-1",
-      expect.objectContaining({ answer: "8" }),
+      expect.objectContaining({
+        answer: "8",
+        options: ["8", "7", "6"],
+      }),
     );
     expect(deps.suggestionsRepo.setStatus).toHaveBeenCalledWith("s-1", "approved");
   });

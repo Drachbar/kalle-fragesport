@@ -3,6 +3,13 @@ import type { SuggestionsRepository } from "../questions/suggestions.repository"
 import type { JobsRepository } from "../questions/jobs.repository";
 import type { AnswerResearcher } from "./answer-researcher";
 
+function optionsEqual(left: string[], right: string[]): boolean {
+  return (
+    left.length === right.length &&
+    left.every((option, index) => option === right[index])
+  );
+}
+
 /** Beroenden för ett auto-uppdateringsjobb (injiceras för testbarhet). */
 export interface AutoUpdateDeps {
   questionsRepo: Pick<QuestionsRepository, "listAutoUpdate">;
@@ -35,12 +42,24 @@ export async function runAutoUpdateJob(
       try {
         const result = await researcher.research(question);
 
-        if (result.changed && result.suggestedAnswer !== question.answer) {
+        const suggestedOptions =
+          question.type === "multiple_choice"
+            ? result.suggestedOptions
+            : question.options;
+        const answerChanged = result.suggestedAnswer !== question.answer;
+        const optionsChanged = !optionsEqual(
+          suggestedOptions,
+          question.options,
+        );
+
+        if (result.changed && (answerChanged || optionsChanged)) {
           await suggestionsRepo.create({
             questionId: question.id,
             jobId,
             previousAnswer: question.answer,
             suggestedAnswer: result.suggestedAnswer,
+            previousOptions: question.options,
+            suggestedOptions,
             sources: result.sources,
             reasoning: result.reasoning,
             confidence: result.confidence,

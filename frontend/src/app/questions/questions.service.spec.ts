@@ -146,6 +146,8 @@ describe('QuestionsService', () => {
         question: 'Hur många mål?',
         previousAnswer: '7',
         suggestedAnswer: '8',
+        previousOptions: ['7', '6'],
+        suggestedOptions: ['8', '7'],
         sources: [],
         reasoning: null,
         confidence: 0.9,

@@ -22,6 +22,7 @@ function makeResult(over: Partial<ResearchResult> = {}): ResearchResult {
   return {
     changed: true,
     suggestedAnswer: "8",
+    suggestedOptions: [],
     confidence: 0.9,
     sources: ["https://example.com"],
     reasoning: "Ett mål till.",
@@ -79,7 +80,36 @@ describe("runAutoUpdateJob", () => {
         jobId: "job-1",
         previousAnswer: "7",
         suggestedAnswer: "8",
+        previousOptions: [],
+        suggestedOptions: [],
         sources: ["https://example.com"],
+      }),
+    );
+  });
+
+  it("skapar förslag när bara flervalsalternativen har ändrats", async () => {
+    const deps = makeDeps({
+      questions: [
+        makeQuestion({
+          answer: "Donald Trump",
+          options: ["Joe Biden", "Barack Obama"],
+          type: "multiple_choice",
+        }),
+      ],
+      research: vi.fn().mockResolvedValue(
+        makeResult({
+          suggestedAnswer: "Donald Trump",
+          suggestedOptions: ["Donald Trump", "Joe Biden", "Barack Obama"],
+        }),
+      ),
+    });
+
+    await runAutoUpdateJob("job-1", deps);
+
+    expect(deps.suggestionsRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        previousOptions: ["Joe Biden", "Barack Obama"],
+        suggestedOptions: ["Donald Trump", "Joe Biden", "Barack Obama"],
       }),
     );
   });
@@ -88,7 +118,9 @@ describe("runAutoUpdateJob", () => {
     const deps = makeDeps({
       research: vi
         .fn()
-        .mockResolvedValue(makeResult({ changed: false, suggestedAnswer: "7" })),
+        .mockResolvedValue(
+          makeResult({ changed: false, suggestedAnswer: "7", suggestedOptions: [] }),
+        ),
     });
     await runAutoUpdateJob("job-1", deps);
 
@@ -100,7 +132,13 @@ describe("runAutoUpdateJob", () => {
       questions: [makeQuestion({ answer: "7" })],
       research: vi
         .fn()
-        .mockResolvedValue(makeResult({ changed: true, suggestedAnswer: "7" })),
+        .mockResolvedValue(
+          makeResult({
+            changed: true,
+            suggestedAnswer: "7",
+            suggestedOptions: [],
+          }),
+        ),
     });
     await runAutoUpdateJob("job-1", deps);
 

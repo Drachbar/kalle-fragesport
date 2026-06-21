@@ -1,7 +1,7 @@
 <div class="review-header">
   <div>
     <h1>Granska AI-förslag</h1>
-    <p>Inget svar ändras innan du godkänner förslaget.</p>
+    <p>Inget svar eller alternativ ändras innan du godkänner förslaget.</p>
   </div>
   <a class="btn btn-ghost" routerLink="/questions">Tillbaka till frågor</a>
 </div>
@@ -24,6 +24,27 @@
           <span class="arrow" aria-hidden="true">→</span>
           <div><span>Föreslaget svar</span><strong>{{ suggestion.suggestedAnswer }}</strong></div>
         </div>
+
+        @if (optionsChanged(suggestion)) {
+          <div class="options-change">
+            <div>
+              <h3>Tidigare alternativ</h3>
+              <ul>
+                @for (option of suggestion.previousOptions; track $index) {
+                  <li>{{ option }}</li>
+                }
+              </ul>
+            </div>
+            <div>
+              <h3>Nya alternativ</h3>
+              <ul>
+                @for (option of suggestion.suggestedOptions; track $index) {
+                  <li>{{ option }}</li>
+                }
+              </ul>
+            </div>
+          </div>
+        }
 
         @if (suggestion.reasoning) {
           <p>{{ suggestion.reasoning }}</p>

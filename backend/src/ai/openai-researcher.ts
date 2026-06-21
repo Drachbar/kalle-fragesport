@@ -32,7 +32,14 @@ export type ResponsesCreate = (
 const RESEARCH_SCHEMA: Record<string, unknown> = {
   type: "object",
   additionalProperties: false,
-  required: ["changed", "suggestedAnswer", "confidence", "sources", "reasoning"],
+  required: [
+    "changed",
+    "suggestedAnswer",
+    "suggestedOptions",
+    "confidence",
+    "sources",
+    "reasoning",
+  ],
   properties: {
     changed: {
       type: "boolean",
@@ -41,6 +48,12 @@ const RESEARCH_SCHEMA: Record<string, unknown> = {
     suggestedAnswer: {
       type: "string",
       description: "Det aktuella, korrekta svaret.",
+    },
+    suggestedOptions: {
+      type: "array",
+      items: { type: "string" },
+      description:
+        "Komplett lista med aktuella flervalsalternativ; tom för fritext.",
     },
     confidence: {
       type: "number",
@@ -61,6 +74,7 @@ const RESEARCH_SCHEMA: Record<string, unknown> = {
 const resultSchema = z.object({
   changed: z.boolean(),
   suggestedAnswer: z.string(),
+  suggestedOptions: z.array(z.string()),
   confidence: z.number(),
   sources: z.array(z.string()),
   reasoning: z.string(),
@@ -75,7 +89,12 @@ export function buildResearchRequest(
     "Du faktagranskar svar i en frågesport. Sök upp det mest aktuella, korrekta svaret.",
     `Fråga: ${question.question}`,
     `Nuvarande lagrade svar: ${question.answer}`,
-    'Sätt "changed" till true endast om det nuvarande svaret är inaktuellt eller felaktigt.',
+    `Frågetyp: ${question.type}`,
+    `Nuvarande svarsalternativ: ${JSON.stringify(question.options)}`,
+    'Sätt "changed" till true om svaret eller flervalsalternativen behöver ändras.',
+    "För multiple_choice: returnera en komplett lista med rimliga alternativ där suggestedAnswer ingår.",
+    "För free_text: returnera suggestedOptions som en tom lista.",
+    'För true_false: behåll alternativen ["Sant", "Falskt"].',
     "Svara kort och faktiskt, på samma format som det nuvarande svaret.",
   ].join("\n");
 
@@ -110,7 +129,14 @@ export function createOpenAiResearcher(opts: {
       const response = await opts.create(
         buildResearchRequest(question, opts.model),
       );
-      return parseResearchResult(response.output_text);
+      const result = parseResearchResult(response.output_text);
+      if (
+        question.type === "multiple_choice" &&
+        !result.suggestedOptions.includes(result.suggestedAnswer)
+      ) {
+        throw new Error("AI-svaret saknas bland de föreslagna alternativen");
+      }
+      return result;
     },
   };
 }

@@ -8,6 +8,8 @@ export interface AnswerSuggestion {
   jobId: string | null;
   previousAnswer: string;
   suggestedAnswer: string;
+  previousOptions: string[];
+  suggestedOptions: string[];
   sources: string[];
   reasoning: string | null;
   confidence: number | null;
@@ -25,6 +27,8 @@ export interface SuggestionInput {
   jobId: string | null;
   previousAnswer: string;
   suggestedAnswer: string;
+  previousOptions: string[];
+  suggestedOptions: string[];
   sources: string[];
   reasoning: string | null;
   confidence: number | null;
@@ -36,6 +40,8 @@ interface SuggestionRow {
   job_id: string | null;
   previous_answer: string;
   suggested_answer: string;
+  previous_options: string[];
+  suggested_options: string[];
   sources: string[];
   reasoning: string | null;
   confidence: number | null;
@@ -44,7 +50,7 @@ interface SuggestionRow {
 }
 
 const SELECT_COLUMNS =
-  "id, question_id, job_id, previous_answer, suggested_answer, sources, reasoning, confidence, status, created_at";
+  "id, question_id, job_id, previous_answer, suggested_answer, previous_options, suggested_options, sources, reasoning, confidence, status, created_at";
 
 function mapRow(row: SuggestionRow): AnswerSuggestion {
   return {
@@ -53,6 +59,8 @@ function mapRow(row: SuggestionRow): AnswerSuggestion {
     jobId: row.job_id,
     previousAnswer: row.previous_answer,
     suggestedAnswer: row.suggested_answer,
+    previousOptions: row.previous_options,
+    suggestedOptions: row.suggested_options,
     // jsonb returneras redan som parsad array av pg.
     sources: row.sources,
     reasoning: row.reasoning,
@@ -78,20 +86,25 @@ export const suggestionsRepository: SuggestionsRepository = {
     jobId,
     previousAnswer,
     suggestedAnswer,
+    previousOptions,
+    suggestedOptions,
     sources,
     reasoning,
     confidence,
   }) {
     const result = await getDatabase().query<SuggestionRow>(
       `INSERT INTO answer_suggestions
-         (question_id, job_id, previous_answer, suggested_answer, sources, reasoning, confidence)
-       VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7)
+         (question_id, job_id, previous_answer, suggested_answer,
+          previous_options, suggested_options, sources, reasoning, confidence)
+       VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8, $9)
        RETURNING ${SELECT_COLUMNS}`,
       [
         questionId,
         jobId,
         previousAnswer,
         suggestedAnswer,
+        JSON.stringify(previousOptions),
+        JSON.stringify(suggestedOptions),
         JSON.stringify(sources),
         reasoning,
         confidence,
@@ -103,7 +116,8 @@ export const suggestionsRepository: SuggestionsRepository = {
   async listPending() {
     const result = await getDatabase().query<SuggestionRow & { question: string }>(
       `SELECT s.id, s.question_id, s.job_id, s.previous_answer, s.suggested_answer,
-              s.sources, s.reasoning, s.confidence, s.status, s.created_at,
+              s.previous_options, s.suggested_options, s.sources,
+              s.reasoning, s.confidence, s.status, s.created_at,
               q.question
        FROM answer_suggestions s
        JOIN questions q ON q.id = s.question_id

@@ -33,11 +33,15 @@ describe("buildResearchRequest", () => {
   });
 
   it("inkluderar frågan och det nuvarande svaret i prompten", () => {
-    const req = buildResearchRequest(makeQuestion(), "gpt-5");
+    const req = buildResearchRequest(
+      makeQuestion({ options: ["7", "8", "9"] }),
+      "gpt-5",
+    );
     const text = JSON.stringify(req.input);
 
     expect(text).toContain("Hur många mål har spelaren gjort i VM totalt?");
     expect(text).toContain("7");
+    expect(text).toContain("8");
   });
 });
 
@@ -47,6 +51,7 @@ describe("parseResearchResult", () => {
       JSON.stringify({
         changed: true,
         suggestedAnswer: "8",
+        suggestedOptions: ["7", "8", "9"],
         confidence: 0.9,
         sources: ["https://example.com"],
         reasoning: "Spelaren gjorde ett mål till.",
@@ -55,6 +60,7 @@ describe("parseResearchResult", () => {
 
     expect(result.changed).toBe(true);
     expect(result.suggestedAnswer).toBe("8");
+    expect(result.suggestedOptions).toEqual(["7", "8", "9"]);
     expect(result.confidence).toBe(0.9);
     expect(result.sources).toEqual(["https://example.com"]);
   });
@@ -74,6 +80,7 @@ describe("createOpenAiResearcher", () => {
       output_text: JSON.stringify({
         changed: false,
         suggestedAnswer: "7",
+        suggestedOptions: [],
         confidence: 0.8,
         sources: [],
         reasoning: "Oförändrat.",
@@ -86,5 +93,28 @@ describe("createOpenAiResearcher", () => {
     expect(create).toHaveBeenCalledOnce();
     expect(result.changed).toBe(false);
     expect(result.suggestedAnswer).toBe("7");
+  });
+
+  it("avvisar flervalsförslag där rätt svar saknas bland alternativen", async () => {
+    const create: ResponsesCreate = vi.fn().mockResolvedValue({
+      output_text: JSON.stringify({
+        changed: true,
+        suggestedAnswer: "8",
+        suggestedOptions: ["6", "7", "9"],
+        confidence: 0.9,
+        sources: ["https://example.com"],
+        reasoning: "Uppdaterat.",
+      }),
+    });
+    const researcher = createOpenAiResearcher({ create, model: "gpt-5" });
+
+    await expect(
+      researcher.research(
+        makeQuestion({
+          type: "multiple_choice",
+          options: ["6", "7", "8"],
+        }),
+      ),
+    ).rejects.toThrow("saknas bland de föreslagna alternativen");
   });
 });

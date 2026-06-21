@@ -42,6 +42,8 @@ export interface PendingSuggestion {
   question: string;
   previousAnswer: string;
   suggestedAnswer: string;
+  previousOptions: string[];
+  suggestedOptions: string[];
   sources: string[];
   reasoning: string | null;
   confidence: number | null;

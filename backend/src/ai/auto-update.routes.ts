@@ -124,7 +124,7 @@ export function createAutoUpdateRouter(
     const input: QuestionInput = {
       question: question.question,
       answer: suggestion.suggestedAnswer,
-      options: question.options,
+      options: suggestion.suggestedOptions,
       category: question.category,
       type: question.type,
       autoUpdate: question.autoUpdate,

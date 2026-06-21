@@ -11,6 +11,8 @@ function suggestion(): PendingSuggestion {
     question: 'Hur många mål har spelaren gjort?',
     previousAnswer: '7',
     suggestedAnswer: '8',
+    previousOptions: ['7', '6', '5'],
+    suggestedOptions: ['8', '7', '6'],
     sources: ['https://example.com/statistik'],
     reasoning: 'Den senaste matchen ökade totalen.',
     confidence: 0.92,
@@ -46,6 +48,8 @@ describe('SuggestionReview', () => {
     expect(el.textContent).toContain('7');
     expect(el.textContent).toContain('8');
     expect(el.textContent).toContain('92 %');
+    expect(el.textContent).toContain('Tidigare alternativ');
+    expect(el.textContent).toContain('Nya alternativ');
     expect(el.querySelector('.sources a')?.getAttribute('href')).toBe(
       'https://example.com/statistik',
     );

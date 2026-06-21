@@ -6,6 +6,8 @@ export interface ResearchResult {
   changed: boolean;
   /** Det föreslagna (aktuella) svaret. */
   suggestedAnswer: string;
+  /** Uppdaterade flervalsalternativ; tom array för fritext. */
+  suggestedOptions: string[];
   /** AI:ns säkerhet, 0–1. */
   confidence: number;
   /** Käll-URL:er från webbsökningen som stöder svaret. */
