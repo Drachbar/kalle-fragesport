@@ -1,4 +1,5 @@
-import { pool } from "./db/pool";
+import { getDatabase } from "./db";
+import { runMigrations } from "./db/migrate";
 import { hashPassword } from "./auth/password";
 import { normalizeEmail } from "./users/users.repository";
 
@@ -20,8 +21,15 @@ async function main(): Promise<void> {
     return;
   }
 
+  // Säkerställ att schemat finns (viktigt vid en färsk PGlite-databas).
+  await runMigrations();
+
   const passwordHash = await hashPassword(password);
-  const result = await pool.query<{ id: string; email: string; role: string }>(
+  const result = await getDatabase().query<{
+    id: string;
+    email: string;
+    role: string;
+  }>(
     `INSERT INTO users (email, password_hash, role)
      VALUES ($1, $2, 'admin')
      ON CONFLICT (email) DO UPDATE
@@ -39,4 +47,4 @@ main()
     console.error("Kunde inte skapa admin:", err);
     process.exitCode = 1;
   })
-  .finally(() => pool.end());
+  .finally(() => getDatabase().close());

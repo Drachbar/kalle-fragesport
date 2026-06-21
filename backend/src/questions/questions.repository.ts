@@ -1,4 +1,4 @@
-import { pool } from "../db/pool";
+import { getDatabase } from "../db";
 import type { Question, QuestionInput, QuestionType } from "./questions.types";
 
 interface QuestionRow {
@@ -39,14 +39,14 @@ export interface QuestionsRepository {
 
 export const questionsRepository: QuestionsRepository = {
   async list() {
-    const result = await pool.query<QuestionRow>(
+    const result = await getDatabase().query<QuestionRow>(
       `SELECT ${SELECT_COLUMNS} FROM questions ORDER BY created_at DESC`,
     );
     return result.rows.map(mapRow);
   },
 
   async getById(id) {
-    const result = await pool.query<QuestionRow>(
+    const result = await getDatabase().query<QuestionRow>(
       `SELECT ${SELECT_COLUMNS} FROM questions WHERE id = $1`,
       [id],
     );
@@ -55,7 +55,7 @@ export const questionsRepository: QuestionsRepository = {
   },
 
   async create({ question, answer, options, category, type }) {
-    const result = await pool.query<QuestionRow>(
+    const result = await getDatabase().query<QuestionRow>(
       `INSERT INTO questions (question, answer, options, category, type)
        VALUES ($1, $2, $3::jsonb, $4, $5)
        RETURNING ${SELECT_COLUMNS}`,
@@ -65,7 +65,7 @@ export const questionsRepository: QuestionsRepository = {
   },
 
   async update(id, { question, answer, options, category, type }) {
-    const result = await pool.query<QuestionRow>(
+    const result = await getDatabase().query<QuestionRow>(
       `UPDATE questions
        SET question = $2, answer = $3, options = $4::jsonb, category = $5, type = $6
        WHERE id = $1
@@ -77,7 +77,7 @@ export const questionsRepository: QuestionsRepository = {
   },
 
   async remove(id) {
-    const result = await pool.query(`DELETE FROM questions WHERE id = $1`, [id]);
+    const result = await getDatabase().query(`DELETE FROM questions WHERE id = $1`, [id]);
     return (result.rowCount ?? 0) > 0;
   },
 };

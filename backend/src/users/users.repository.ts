@@ -1,4 +1,4 @@
-import { pool } from "../db/pool";
+import { getDatabase } from "../db";
 import type { NewUser, Role, User } from "./users.types";
 
 interface UserRow {
@@ -37,7 +37,7 @@ export interface UsersRepository {
 
 export const usersRepository: UsersRepository = {
   async createUser({ email, passwordHash, role = "user" }) {
-    const result = await pool.query<UserRow>(
+    const result = await getDatabase().query<UserRow>(
       `INSERT INTO users (email, password_hash, role)
        VALUES ($1, $2, $3)
        RETURNING ${SELECT_COLUMNS}`,
@@ -47,7 +47,7 @@ export const usersRepository: UsersRepository = {
   },
 
   async findUserByEmail(email) {
-    const result = await pool.query<UserRow>(
+    const result = await getDatabase().query<UserRow>(
       `SELECT ${SELECT_COLUMNS} FROM users WHERE email = $1`,
       [normalizeEmail(email)],
     );
@@ -56,7 +56,7 @@ export const usersRepository: UsersRepository = {
   },
 
   async findUserById(id) {
-    const result = await pool.query<UserRow>(
+    const result = await getDatabase().query<UserRow>(
       `SELECT ${SELECT_COLUMNS} FROM users WHERE id = $1`,
       [id],
     );

@@ -1,8 +1,7 @@
 import express, { Request, Response } from "express";
 import session from "express-session";
-import connectPgSimple from "connect-pg-simple";
 import { runMigrations } from "./db/migrate";
-import { pool } from "./db/pool";
+import { DbSessionStore } from "./auth/session-store";
 import { createAuthRouter } from "./auth/auth.routes";
 import { createQuestionsRouter } from "./questions/questions.routes";
 
@@ -23,14 +22,9 @@ if (isProd) {
   app.set("trust proxy", 1);
 }
 
-const PgSession = connectPgSimple(session);
 app.use(
   session({
-    store: new PgSession({
-      pool,
-      tableName: "session",
-      createTableIfMissing: false,
-    }),
+    store: new DbSessionStore(),
     secret: sessionSecret,
     resave: false,
     saveUninitialized: false,

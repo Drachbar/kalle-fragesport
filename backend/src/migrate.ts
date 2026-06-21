@@ -1,4 +1,5 @@
 import { runMigrations } from "./db/migrate";
+import { getDatabase } from "./db";
 
 /**
  * CLI för databasmigreringar.
@@ -19,7 +20,9 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((err) => {
-  console.error("Migrering misslyckades:", err);
-  process.exitCode = 1;
-});
+main()
+  .catch((err) => {
+    console.error("Migrering misslyckades:", err);
+    process.exitCode = 1;
+  })
+  .finally(() => getDatabase().close());

@@ -1,10 +1,9 @@
--- Sessionstabell för connect-pg-simple (express-session-store).
--- Schemat följer connect-pg-simple/table.sql. Storen körs med
--- createTableIfMissing: false så att schemat ägs av den här migreringen.
+-- Sessionstabell för express-session (egen DbSessionStore).
+-- expire som timestamptz för entydig jämförelse mot now() i båda drivrutinerna.
 CREATE TABLE "session" (
-  "sid"    varchar      NOT NULL COLLATE "default",
-  "sess"   json         NOT NULL,
-  "expire" timestamp(6) NOT NULL
+  "sid"    varchar     NOT NULL COLLATE "default",
+  "sess"   json        NOT NULL,
+  "expire" timestamptz NOT NULL
 );
 
 ALTER TABLE "session"
