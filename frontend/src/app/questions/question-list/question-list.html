@@ -5,17 +5,19 @@
   }
 </div>
 
-@if (error()) {
-  <p role="alert" class="error">{{ error() }}</p>
+@if (actionError()) {
+  <p role="alert" class="error">{{ actionError() }}</p>
 }
 
-@if (loading()) {
+@if (questions.isLoading()) {
   <p>Laddar…</p>
-} @else if (questions().length === 0) {
+} @else if (questions.error()) {
+  <p role="alert" class="error">Kunde inte hämta frågor</p>
+} @else if (questions.value().length === 0) {
   <p>Inga frågor än.</p>
 } @else {
   <ul class="question-list">
-    @for (q of questions(); track q.id) {
+    @for (q of questions.value(); track q.id) {
       <li class="question-card">
         <div class="question-main">
           <h2>{{ q.question }}</h2>
