@@ -7,6 +7,10 @@ export const routes: Routes = [
     loadComponent: () => import('./home/home').then((m) => m.Home),
   },
   {
+    path: 'quiz/:id',
+    loadComponent: () => import('./home/home').then((m) => m.Home),
+  },
+  {
     path: 'login',
     loadComponent: () => import('./auth/login/login').then((m) => m.Login),
   },

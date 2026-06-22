@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
+import { BehaviorSubject, of } from 'rxjs';
 import { Home } from './home';
 import { QuestionsService, type Question } from '../questions/questions.service';
 
@@ -18,21 +19,33 @@ function makeQuestion(over: Partial<Question> = {}): Question {
   };
 }
 
-function configure(question: Question | null) {
+function configure(options: {
+  initialId?: string | null;
+  random?: ReturnType<typeof vi.fn>;
+  get?: ReturnType<typeof vi.fn>;
+}) {
+  const paramMap$ = new BehaviorSubject(
+    convertToParamMap(options.initialId ? { id: options.initialId } : {}),
+  );
+  const navigate = vi.fn(() => Promise.resolve(true));
+  const random = options.random ?? vi.fn(() => of(makeQuestion()));
+  const get = options.get ?? vi.fn((id: string) => of(makeQuestion({ id })));
+
   TestBed.configureTestingModule({
     imports: [Home],
     providers: [
-      {
-        provide: QuestionsService,
-        useValue: { random: () => of(question) },
-      },
+      { provide: QuestionsService, useValue: { random, get } },
+      { provide: ActivatedRoute, useValue: { paramMap: paramMap$ } },
+      { provide: Router, useValue: { navigate } },
     ],
   });
+
+  return { paramMap$, navigate, random, get };
 }
 
 describe('Home', () => {
   it('hämtar en slumpmässig fråga utan inloggning', async () => {
-    configure(makeQuestion());
+    configure({});
     const fixture = TestBed.createComponent(Home);
     await fixture.whenStable();
 
@@ -41,8 +54,72 @@ describe('Home', () => {
     expect(el.textContent).not.toContain('Rätt svar:');
   });
 
+  it('speglar den slumpade frågans id i url:en (ersätter historiken)', async () => {
+    const { navigate } = configure({
+      random: vi.fn(() => of(makeQuestion({ id: 'q-7' }))),
+    });
+    const fixture = TestBed.createComponent(Home);
+    await fixture.whenStable();
+
+    expect(navigate).toHaveBeenCalledWith(['/quiz', 'q-7'], {
+      replaceUrl: true,
+    });
+  });
+
+  it('laddar en specifik fråga från url:en', async () => {
+    const get = vi.fn((id: string) =>
+      of(makeQuestion({ id, question: 'Vad heter Norges huvudstad?' })),
+    );
+    const { random } = configure({ initialId: 'q-9', get });
+    const fixture = TestBed.createComponent(Home);
+    await fixture.whenStable();
+
+    expect(get).toHaveBeenCalledWith('q-9');
+    expect(random).not.toHaveBeenCalled();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Vad heter Norges huvudstad?',
+    );
+  });
+
+  it('laddar om frågan när url:en ändras (t.ex. bakåtknappen)', async () => {
+    const get = vi.fn((id: string) =>
+      of(makeQuestion({ id, question: `Fråga ${id}` })),
+    );
+    const { paramMap$ } = configure({ initialId: 'q-1', get });
+    const fixture = TestBed.createComponent(Home);
+    await fixture.whenStable();
+
+    paramMap$.next(convertToParamMap({ id: 'q-2' }));
+    await fixture.whenStable();
+
+    expect(get).toHaveBeenLastCalledWith('q-2');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Fråga q-2',
+    );
+  });
+
+  it('hämtar en ny slumpmässig fråga och pushar historik vid "Nästa fråga"', async () => {
+    const random = vi.fn(() => of(makeQuestion({ id: 'q-3' })));
+    const { navigate } = configure({ random });
+    const fixture = TestBed.createComponent(Home);
+    await fixture.whenStable();
+    navigate.mockClear();
+    const el = fixture.nativeElement as HTMLElement;
+
+    const nextBtn = Array.from(el.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Nästa fråga'),
+    ) as HTMLButtonElement;
+    nextBtn.click();
+    await fixture.whenStable();
+
+    expect(random).toHaveBeenCalledTimes(2);
+    expect(navigate).toHaveBeenCalledWith(['/quiz', 'q-3'], {
+      replaceUrl: false,
+    });
+  });
+
   it('visar rätt svar när man klickar "Visa svar"', async () => {
-    configure(makeQuestion());
+    configure({});
     const fixture = TestBed.createComponent(Home);
     await fixture.whenStable();
     const el = fixture.nativeElement as HTMLElement;
@@ -58,7 +135,7 @@ describe('Home', () => {
   });
 
   it('döljer svaret igen vid "Nästa fråga"', async () => {
-    configure(makeQuestion());
+    configure({});
     const fixture = TestBed.createComponent(Home);
     await fixture.whenStable();
     const el = fixture.nativeElement as HTMLElement;
@@ -77,7 +154,7 @@ describe('Home', () => {
   });
 
   it('visar frågans kategori', async () => {
-    configure(makeQuestion({ category: 'Geografi' }));
+    configure({ random: vi.fn(() => of(makeQuestion({ category: 'Geografi' }))) });
     const fixture = TestBed.createComponent(Home);
     await fixture.whenStable();
 
@@ -87,7 +164,7 @@ describe('Home', () => {
   });
 
   it('döljer kategorin när frågan saknar kategori', async () => {
-    configure(makeQuestion({ category: null }));
+    configure({ random: vi.fn(() => of(makeQuestion({ category: null }))) });
     const fixture = TestBed.createComponent(Home);
     await fixture.whenStable();
 
@@ -96,7 +173,7 @@ describe('Home', () => {
   });
 
   it('visar meddelande när det inte finns några frågor', async () => {
-    configure(null);
+    configure({ random: vi.fn(() => of(null)) });
     const fixture = TestBed.createComponent(Home);
     await fixture.whenStable();
 
