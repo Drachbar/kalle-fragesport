@@ -6,6 +6,9 @@
   <p>Laddar…</p>
 } @else if (current(); as q) {
   <article class="quiz-card">
+    @if (q.category) {
+      <p class="category"><span class="tag">{{ q.category }}</span></p>
+    }
     <p class="question">{{ q.question }}</p>
 
     @if (q.options.length) {

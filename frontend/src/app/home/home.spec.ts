@@ -76,6 +76,25 @@ describe('Home', () => {
     expect(el.textContent).not.toContain('Rätt svar:');
   });
 
+  it('visar frågans kategori', async () => {
+    configure(makeQuestion({ category: 'Geografi' }));
+    const fixture = TestBed.createComponent(Home);
+    await fixture.whenStable();
+
+    const el = fixture.nativeElement as HTMLElement;
+    const category = el.querySelector('.category');
+    expect(category?.textContent).toContain('Geografi');
+  });
+
+  it('döljer kategorin när frågan saknar kategori', async () => {
+    configure(makeQuestion({ category: null }));
+    const fixture = TestBed.createComponent(Home);
+    await fixture.whenStable();
+
+    const el = fixture.nativeElement as HTMLElement;
+    expect(el.querySelector('.category')).toBeNull();
+  });
+
   it('visar meddelande när det inte finns några frågor', async () => {
     configure(null);
     const fixture = TestBed.createComponent(Home);
