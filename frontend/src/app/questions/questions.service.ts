@@ -91,11 +91,14 @@ export class QuestionsService {
     });
   }
 
-  /** Startar ett AI-jobb som söker upp aktuella svar för tidskänsliga frågor. */
-  startAutoUpdate(): Observable<{ jobId: string }> {
+  /**
+   * Startar ett AI-jobb som söker upp aktuella svar. Utan `questionId` körs alla
+   * tidskänsliga frågor; med `questionId` uppdateras bara den valda frågan.
+   */
+  startAutoUpdate(questionId?: string): Observable<{ jobId: string }> {
     return this.http.post<{ jobId: string }>(
       `${this.baseUrl}/auto-update`,
-      {},
+      questionId ? { questionId } : {},
       { withCredentials: true },
     );
   }

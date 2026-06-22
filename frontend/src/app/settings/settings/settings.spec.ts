@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Settings } from './settings';
 import {
   SettingsService,
@@ -72,6 +73,31 @@ describe('Settings', () => {
 
     expect(service.saveOpenAiKey).toHaveBeenCalledWith('sk-min-hemliga-nyckel');
     expect(component.status()?.userKeySet).toBe(true);
+  });
+
+  it('visar serverns felmeddelande när sparandet misslyckas', () => {
+    const { fixture } = setup({ envKeyPresent: false, userKeySet: false });
+    const service = TestBed.inject(SettingsService) as unknown as {
+      saveOpenAiKey: ReturnType<typeof vi.fn>;
+    };
+    service.saveOpenAiKey.mockReturnValueOnce(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 400,
+            error: { error: 'Ogiltig OpenAI-nyckel' },
+          }),
+      ),
+    );
+    const component = fixture.componentInstance as unknown as {
+      form: { setValue: (v: { apiKey: string }) => void };
+      save: () => void;
+      error: () => string | null;
+    };
+    component.form.setValue({ apiKey: 'sk-trasig' });
+    component.save();
+
+    expect(component.error()).toBe('Ogiltig OpenAI-nyckel');
   });
 
   it('tar bort en sparad nyckel', () => {

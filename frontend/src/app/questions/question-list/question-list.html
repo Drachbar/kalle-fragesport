@@ -63,6 +63,14 @@
             <a class="btn btn-ghost" [routerLink]="['/questions', q.id, 'edit']">
               Redigera
             </a>
+            <button
+              type="button"
+              class="btn btn-ghost"
+              [disabled]="updating()"
+              (click)="startAutoUpdate(q.id)"
+            >
+              Uppdatera med AI
+            </button>
             <button type="button" class="btn btn-ghost" (click)="remove(q)">
               Ta bort
             </button>

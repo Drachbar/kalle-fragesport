@@ -33,13 +33,18 @@ function makeResult(over: Partial<ResearchResult> = {}): ResearchResult {
 function makeDeps(over: {
   questions?: Question[];
   research?: (q: Question) => Promise<ResearchResult>;
+  questionId?: string;
 } = {}): AutoUpdateDeps {
   return {
     questionsRepo: {
       listAutoUpdate: vi
         .fn()
         .mockResolvedValue(over.questions ?? [makeQuestion()]),
+      getById: vi
+        .fn()
+        .mockResolvedValue(over.questions?.[0] ?? makeQuestion()),
     },
+    questionId: over.questionId,
     suggestionsRepo: {
       create: vi.fn().mockResolvedValue(undefined),
     },
@@ -162,6 +167,34 @@ describe("runAutoUpdateJob", () => {
     const lastCall = (deps.jobsRepo.update as ReturnType<typeof vi.fn>).mock
       .calls.at(-1);
     expect(lastCall?.[1]).toMatchObject({ status: "completed" });
+  });
+
+  it("uppdaterar bara den valda frågan när questionId anges", async () => {
+    const q = makeQuestion({ id: "q-42" });
+    const deps = makeDeps({ questionId: "q-42", questions: [q] });
+    deps.questionsRepo.getById = vi.fn().mockResolvedValue(q);
+
+    await runAutoUpdateJob("job-1", deps);
+
+    expect(deps.questionsRepo.getById).toHaveBeenCalledWith("q-42");
+    expect(deps.questionsRepo.listAutoUpdate).not.toHaveBeenCalled();
+    expect(deps.jobsRepo.update).toHaveBeenCalledWith("job-1", {
+      status: "running",
+      total: 1,
+    });
+  });
+
+  it("completar med total 0 om den valda frågan saknas", async () => {
+    const deps = makeDeps({ questionId: "saknas" });
+    deps.questionsRepo.getById = vi.fn().mockResolvedValue(null);
+
+    await runAutoUpdateJob("job-1", deps);
+
+    expect(deps.jobsRepo.update).toHaveBeenCalledWith("job-1", {
+      status: "running",
+      total: 0,
+    });
+    expect(deps.suggestionsRepo.create).not.toHaveBeenCalled();
   });
 
   it("markerar jobbet som failed om listAutoUpdate kastar", async () => {

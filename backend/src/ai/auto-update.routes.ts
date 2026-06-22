@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { z } from "zod";
 import { requireAdmin } from "../auth/middleware";
 import {
   questionsRepository,
@@ -76,8 +77,18 @@ export function createAutoUpdateRouter(
   } = deps;
   const router = Router();
 
-  // Starta ett bakgrundsjobb som går igenom tidskänsliga frågor.
+  // Valfritt: begränsa jobbet till en specifik fråga.
+  const startSchema = z.object({ questionId: z.string().min(1).optional() });
+
+  // Starta ett bakgrundsjobb. Utan questionId körs alla tidskänsliga frågor;
+  // med questionId uppdateras enbart den valda frågan.
   router.post("/auto-update", requireAdmin, async (req, res) => {
+    const parsed = startSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      res.status(400).json({ error: "Ogiltig fråga" });
+      return;
+    }
+
     if (await jobsRepo.hasActive()) {
       res.status(409).json({ error: "Ett jobb kör redan" });
       return;
@@ -110,6 +121,7 @@ export function createAutoUpdateRouter(
       suggestionsRepo,
       jobsRepo,
       researcher,
+      questionId: parsed.data.questionId,
     });
 
     res.status(201).json({ jobId: job.id });

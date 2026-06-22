@@ -1,4 +1,5 @@
 import type { QuestionsRepository } from "../questions/questions.repository";
+import type { Question } from "../questions/questions.types";
 import type { SuggestionsRepository } from "../questions/suggestions.repository";
 import type { JobsRepository } from "../questions/jobs.repository";
 import type { AnswerResearcher } from "./answer-researcher";
@@ -10,12 +11,26 @@ function optionsEqual(left: string[], right: string[]): boolean {
   );
 }
 
+/** Hämtar en enskild fråga; tom lista om den inte finns. */
+async function resolveSingleQuestion(
+  questionsRepo: Pick<QuestionsRepository, "getById">,
+  questionId: string,
+): Promise<Question[]> {
+  const question = await questionsRepo.getById(questionId);
+  return question ? [question] : [];
+}
+
 /** Beroenden för ett auto-uppdateringsjobb (injiceras för testbarhet). */
 export interface AutoUpdateDeps {
-  questionsRepo: Pick<QuestionsRepository, "listAutoUpdate">;
+  questionsRepo: Pick<QuestionsRepository, "listAutoUpdate" | "getById">;
   suggestionsRepo: Pick<SuggestionsRepository, "create">;
   jobsRepo: Pick<JobsRepository, "update">;
   researcher: AnswerResearcher;
+  /**
+   * Om satt: uppdatera bara denna fråga (oavsett autoUpdate-flaggan).
+   * Annars körs alla frågor som är markerade för auto-uppdatering.
+   */
+  questionId?: string;
 }
 
 /**
@@ -29,10 +44,14 @@ export async function runAutoUpdateJob(
   jobId: string,
   deps: AutoUpdateDeps,
 ): Promise<void> {
-  const { questionsRepo, suggestionsRepo, jobsRepo, researcher } = deps;
+  const { questionsRepo, suggestionsRepo, jobsRepo, researcher, questionId } =
+    deps;
 
   try {
-    const questions = await questionsRepo.listAutoUpdate();
+    // En specifik fråga (vald av admin) eller alla auto-uppdaterade frågor.
+    const questions = questionId
+      ? await resolveSingleQuestion(questionsRepo, questionId)
+      : await questionsRepo.listAutoUpdate();
     await jobsRepo.update(jobId, { status: "running", total: questions.length });
 
     let processed = 0;

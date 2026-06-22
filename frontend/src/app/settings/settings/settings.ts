@@ -15,6 +15,7 @@ import {
   SettingsService,
   type OpenAiKeyStatus,
 } from '../settings.service';
+import { extractHttpError } from '../../shared/http-error';
 
 @Component({
   selector: 'app-settings',
@@ -71,7 +72,8 @@ export class Settings {
           this.form.reset();
           this.saved.set(true);
         },
-        error: () => this.error.set('Kunde inte spara nyckeln'),
+        error: (err) =>
+          this.error.set(extractHttpError(err, 'Kunde inte spara nyckeln')),
       });
   }
 
@@ -88,7 +90,8 @@ export class Settings {
           this.status.update((current) =>
             current ? { ...current, userKeySet: false } : current,
           ),
-        error: () => this.error.set('Kunde inte ta bort nyckeln'),
+        error: (err) =>
+          this.error.set(extractHttpError(err, 'Kunde inte ta bort nyckeln')),
       });
   }
 }

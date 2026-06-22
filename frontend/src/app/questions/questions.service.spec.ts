@@ -118,6 +118,15 @@ describe('QuestionsService', () => {
     expect(jobId).toBe('job-1');
   });
 
+  it('startAutoUpdate skickar med questionId när det anges', () => {
+    service.startAutoUpdate('q-9').subscribe();
+
+    const req = httpMock.expectOne('/api/questions/auto-update');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ questionId: 'q-9' });
+    req.flush({ jobId: 'job-1' });
+  });
+
   it('getAutoUpdateStatus hämtar status för ett jobb', () => {
     service.getAutoUpdateStatus('job-1').subscribe();
     const req = httpMock.expectOne('/api/questions/auto-update/job-1');

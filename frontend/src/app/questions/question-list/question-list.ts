@@ -11,6 +11,7 @@ import { RouterLink } from '@angular/router';
 import { httpResource } from '@angular/common/http';
 import { switchMap } from 'rxjs';
 import { AuthService } from '../../auth/auth.service';
+import { extractHttpError } from '../../shared/http-error';
 import {
   QuestionsService,
   type AutoUpdateJobStatus,
@@ -62,11 +63,12 @@ export class QuestionList {
     this.actionError.set(null);
     this.questionsService.delete(question.id).subscribe({
       next: () => this.questions.reload(),
-      error: () => this.actionError.set('Kunde inte ta bort frågan'),
+      error: (err) =>
+        this.actionError.set(extractHttpError(err, 'Kunde inte ta bort frågan')),
     });
   }
 
-  protected startAutoUpdate(): void {
+  protected startAutoUpdate(questionId?: string): void {
     this.actionError.set(null);
     this.jobStatus.set({
       id: '',
@@ -78,7 +80,7 @@ export class QuestionList {
     });
 
     this.questionsService
-      .startAutoUpdate()
+      .startAutoUpdate(questionId)
       .pipe(
         switchMap(({ jobId }) => this.jobStatusService.watch(jobId)),
         takeUntilDestroyed(this.destroyRef),
@@ -90,9 +92,11 @@ export class QuestionList {
             this.actionError.set(job.error ?? 'AI-uppdateringen misslyckades');
           }
         },
-        error: () => {
+        error: (err) => {
           this.jobStatus.set(null);
-          this.actionError.set('Kunde inte starta AI-uppdateringen');
+          this.actionError.set(
+            extractHttpError(err, 'Kunde inte starta AI-uppdateringen'),
+          );
         },
       });
   }

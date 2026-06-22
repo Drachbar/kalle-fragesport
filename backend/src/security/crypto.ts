@@ -1,16 +1,20 @@
-import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  randomBytes,
+} from "node:crypto";
 
 /**
  * Symmetrisk kryptering av hemligheter (t.ex. en användares OpenAI-nyckel) med
  * AES-256-GCM. Endast Nodes inbyggda crypto används – inga externa beroenden.
  *
- * Nyckeln läses från miljövariabeln API_KEY_ENCRYPTION_KEY och måste vara 32
- * byte, angiven som 64 hex-tecken eller base64.
+ * En 32-byte nyckel härleds från miljövariabeln API_KEY_ENCRYPTION_KEY via
+ * SHA-256, så vilken icke-tom hemlighet som helst fungerar (oavsett längd/format).
  */
 
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12; // Rekommenderad IV-längd för GCM.
-const KEY_LENGTH = 32; // AES-256.
 
 function loadKey(env: NodeJS.ProcessEnv): Buffer {
   const raw = env.API_KEY_ENCRYPTION_KEY;
@@ -20,16 +24,8 @@ function loadKey(env: NodeJS.ProcessEnv): Buffer {
     );
   }
 
-  const key = /^[0-9a-fA-F]{64}$/.test(raw)
-    ? Buffer.from(raw, "hex")
-    : Buffer.from(raw, "base64");
-
-  if (key.length !== KEY_LENGTH) {
-    throw new Error(
-      `API_KEY_ENCRYPTION_KEY måste vara ${KEY_LENGTH} byte (64 hex-tecken eller base64)`,
-    );
-  }
-  return key;
+  // Härled alltid en 32-byte nyckel oavsett hur hemligheten är formaterad.
+  return createHash("sha256").update(raw, "utf8").digest();
 }
 
 /** Krypterar en sträng. Returnerar "iv:authTag:ciphertext" (base64-delar). */

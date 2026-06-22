@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { QuestionsService, type PendingSuggestion } from '../questions.service';
+import { extractHttpError } from '../../shared/http-error';
 
 @Component({
   selector: 'app-suggestion-review',
@@ -56,7 +57,10 @@ export class SuggestionReview {
       .pipe(finalize(() => this.actionId.set(null)))
       .subscribe({
         next: () => this.suggestions.update((items) => items.filter((item) => item.id !== id)),
-        error: () => this.actionError.set('Kunde inte behandla förslaget'),
+        error: (err) =>
+          this.actionError.set(
+            extractHttpError(err, 'Kunde inte behandla förslaget'),
+          ),
       });
   }
 }

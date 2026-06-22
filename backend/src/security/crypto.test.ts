@@ -42,8 +42,11 @@ describe("crypto", () => {
     );
   });
 
-  it("kastar om krypteringsnyckeln har fel längd", () => {
-    const bad = { API_KEY_ENCRYPTION_KEY: "kort" } as NodeJS.ProcessEnv;
-    expect(() => encryptSecret("x", bad)).toThrow();
+  it("accepterar en hemlighet av valfri längd (härleder 32-byte nyckel)", () => {
+    const shortEnv = {
+      API_KEY_ENCRYPTION_KEY: "min-korta-hemlighet",
+    } as NodeJS.ProcessEnv;
+    const encrypted = encryptSecret("sk-test", shortEnv);
+    expect(decryptSecret(encrypted, shortEnv)).toBe("sk-test");
   });
 });

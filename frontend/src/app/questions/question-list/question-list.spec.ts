@@ -5,7 +5,8 @@ import {
   provideHttpClientTesting,
   HttpTestingController,
 } from '@angular/common/http/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
 import { QuestionList } from './question-list';
 import { QuestionsService, type Question } from '../questions.service';
 import { AuthService } from '../../auth/auth.service';
@@ -153,6 +154,71 @@ describe('QuestionList', () => {
     expect(startAutoUpdate).toHaveBeenCalledOnce();
     expect(watch).toHaveBeenCalledWith('job-1');
     expect(el.textContent).toContain('1');
+  });
+
+  it('uppdaterar en enskild fråga med AI via questionId', async () => {
+    const startAutoUpdate = vi.fn(() => of({ jobId: 'job-1' }));
+    const watch = vi.fn(() =>
+      of({
+        id: 'job-1',
+        status: 'completed' as const,
+        total: 1,
+        processed: 1,
+        suggestionsCreated: 1,
+        error: null,
+      }),
+    );
+    const { http } = configure({
+      isAdmin: true,
+      service: { startAutoUpdate },
+      jobStatusService: { watch },
+    });
+    const fixture = await setup(http, [makeQuestion({ id: 'q-1' })]);
+    const el = fixture.nativeElement as HTMLElement;
+
+    const btn = Array.from(el.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Uppdatera med AI'),
+    ) as HTMLButtonElement;
+    btn.click();
+    fixture.detectChanges();
+    await tick();
+    fixture.detectChanges();
+
+    expect(startAutoUpdate).toHaveBeenCalledWith('q-1');
+    expect(watch).toHaveBeenCalledWith('job-1');
+  });
+
+  it('visar serverns felmeddelande när AI-uppdateringen misslyckas', async () => {
+    const startAutoUpdate = vi.fn(() =>
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 503,
+            error: {
+              error:
+                'Ingen OpenAI-nyckel konfigurerad – ange en egen under Inställningar',
+            },
+          }),
+      ),
+    );
+    const { http } = configure({
+      isAdmin: true,
+      service: { startAutoUpdate },
+    });
+    const fixture = await setup(http, [makeQuestion({ autoUpdate: true })]);
+    const el = fixture.nativeElement as HTMLElement;
+
+    const btn = Array.from(el.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Auto-uppdatera svar'),
+    ) as HTMLButtonElement;
+    btn.click();
+    fixture.detectChanges();
+    await tick();
+    fixture.detectChanges();
+
+    expect(el.textContent).toContain(
+      'Ingen OpenAI-nyckel konfigurerad – ange en egen under Inställningar',
+    );
   });
 
   it('döljer AI-knappen för icke-admin', async () => {

@@ -113,6 +113,19 @@ describe("POST /questions/auto-update (admin)", () => {
     );
   });
 
+  it("skickar med questionId till runJob när det anges", async () => {
+    const deps = makeDeps();
+    const res = await request(makeApp(deps, adminSession))
+      .post("/questions/auto-update")
+      .send({ questionId: "q-9" });
+
+    expect(res.status).toBe(201);
+    expect(deps.runJob).toHaveBeenCalledWith(
+      "job-1",
+      expect.objectContaining({ questionId: "q-9" }),
+    );
+  });
+
   it("svarar 409 om ett jobb redan kör", async () => {
     const deps = makeDeps({
       jobsRepo: {
