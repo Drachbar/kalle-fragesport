@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { httpResource } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
 import { QuestionsService, type PendingSuggestion } from '../questions.service';
@@ -14,20 +15,14 @@ import { extractHttpError } from '../../shared/http-error';
 export class SuggestionReview {
   private readonly questionsService = inject(QuestionsService);
 
-  protected readonly suggestions = signal<PendingSuggestion[]>([]);
-  protected readonly loading = signal(true);
+  // Deklarativ läsning av förslagen. .reload() hämtar om efter godkänn/avvisa.
+  protected readonly suggestions = httpResource<PendingSuggestion[]>(
+    () => ({ url: '/api/questions/suggestions', withCredentials: true }),
+    { defaultValue: [] },
+  );
+
   protected readonly actionId = signal<string | null>(null);
   protected readonly actionError = signal<string | null>(null);
-
-  constructor() {
-    this.questionsService
-      .listSuggestions()
-      .pipe(finalize(() => this.loading.set(false)))
-      .subscribe({
-        next: (suggestions) => this.suggestions.set(suggestions),
-        error: () => this.actionError.set('Kunde inte hämta AI-förslag'),
-      });
-  }
 
   protected confidencePercent(confidence: number | null): number | null {
     return confidence === null ? null : Math.round(confidence * 100);
@@ -56,7 +51,7 @@ export class SuggestionReview {
     request()
       .pipe(finalize(() => this.actionId.set(null)))
       .subscribe({
-        next: () => this.suggestions.update((items) => items.filter((item) => item.id !== id)),
+        next: () => this.suggestions.reload(),
         error: (err) =>
           this.actionError.set(
             extractHttpError(err, 'Kunde inte behandla förslaget'),

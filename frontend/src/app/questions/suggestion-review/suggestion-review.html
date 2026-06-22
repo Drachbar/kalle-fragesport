@@ -10,13 +10,15 @@
   <p role="alert" class="error">{{ actionError() }}</p>
 }
 
-@if (loading()) {
+@if (suggestions.isLoading()) {
   <p>Laddar…</p>
-} @else if (suggestions().length === 0) {
+} @else if (suggestions.error()) {
+  <p role="alert" class="error">Kunde inte hämta AI-förslag</p>
+} @else if (suggestions.value().length === 0) {
   <p>Inga väntande förslag.</p>
 } @else {
   <ul class="suggestions">
-    @for (suggestion of suggestions(); track suggestion.id) {
+    @for (suggestion of suggestions.value(); track suggestion.id) {
       <li class="suggestion-card">
         <h2>{{ suggestion.question }}</h2>
         <div class="answer-change">
