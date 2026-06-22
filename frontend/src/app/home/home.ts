@@ -11,6 +11,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { QuestionsService, type Question } from '../questions/questions.service';
+import { SeoService } from '../shared/seo.service';
 
 /** Transfer-state-nyckel för en specifik fråga (delas server↔klient). */
 const questionKey = (id: string) => makeStateKey<Question>('question:' + id);
@@ -29,6 +30,7 @@ export class Home {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly transferState = inject(TransferState);
+  private readonly seo = inject(SeoService);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
   protected readonly current = signal<Question | null>(null);
@@ -72,6 +74,14 @@ export class Home {
     });
   }
 
+  /** Visar en fråga och uppdaterar SEO-taggarna (titel, description, canonical). */
+  private show(question: Question): void {
+    this.showAnswer.set(false);
+    this.current.set(question);
+    this.loading.set(false);
+    this.seo.setQuestion(question);
+  }
+
   protected reveal(): void {
     this.showAnswer.set(true);
   }
@@ -86,11 +96,12 @@ export class Home {
     this.loading.set(true);
     this.questionsService.random().subscribe({
       next: (question) => {
-        this.current.set(question);
-        this.loading.set(false);
         if (!question) {
+          this.current.set(null);
+          this.loading.set(false);
           return;
         }
+        this.show(question);
         if (this.isBrowser) {
           // Spegla id:t i url:en. replaceUrl=true vid första laddningen (ingen
           // extra historikpost), false vid "Nästa fråga" så bakåt fungerar.
@@ -117,9 +128,7 @@ export class Home {
     const cached = this.transferState.get(key, null);
     if (cached) {
       this.transferState.remove(key);
-      this.showAnswer.set(false);
-      this.current.set(cached);
-      this.loading.set(false);
+      this.show(cached);
       return;
     }
 
@@ -127,8 +136,7 @@ export class Home {
     this.loading.set(true);
     this.questionsService.get(id).subscribe({
       next: (question) => {
-        this.current.set(question);
-        this.loading.set(false);
+        this.show(question);
         // På servern: spara åt klienten så den slipper hämta igen.
         if (!this.isBrowser) {
           this.transferState.set(key, question);

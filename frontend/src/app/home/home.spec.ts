@@ -1,4 +1,5 @@
 import { PLATFORM_ID, TransferState, makeStateKey } from '@angular/core';
+import { Title } from '@angular/platform-browser';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { BehaviorSubject, of } from 'rxjs';
@@ -233,6 +234,16 @@ describe('Home', () => {
     button('Nästa fråga').click();
     await fixture.whenStable();
     expect(el.textContent).not.toContain('Rätt svar:');
+  });
+
+  it('sätter en frågespecifik sidtitel (SEO)', async () => {
+    configure({
+      random: vi.fn(() => of(makeQuestion({ question: 'Vad är ett primtal?' }))),
+    });
+    const fixture = TestBed.createComponent(Home);
+    await fixture.whenStable();
+
+    expect(TestBed.inject(Title).getTitle()).toContain('Vad är ett primtal?');
   });
 
   it('visar frågans kategori', async () => {
