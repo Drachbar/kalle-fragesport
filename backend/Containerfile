@@ -1,0 +1,38 @@
+# Backend: Express + socket.io + Postgres-klient.
+# Debian-bas (glibc) så native-modulen bcrypt kan använda prebuilt-binärer.
+
+# ---- prod-beroenden (inkl. native moduler) ----
+FROM node:24-bookworm-slim AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+# ---- bygg TypeScript -> dist ----
+FROM node:24-bookworm-slim AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY tsconfig.json ./
+COPY src ./src
+RUN npm run build
+
+# ---- runtime ----
+FROM node:24-bookworm-slim AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=3000
+
+COPY package.json ./
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=build /app/dist ./dist
+# runMigrations() läser SQL-filerna härifrån vid uppstart (/app/migrations).
+COPY migrations ./migrations
+
+EXPOSE 3000
+USER node
+
+# Healthcheck sätts vid körning (podmans OCI-format ignorerar HEALTHCHECK i
+# imagen). Backenden exponerar GET /health. I quadlet:
+#   HealthCmd=node -e "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+# eller: podman run --health-cmd '...' --health-interval=30s
+CMD ["node", "dist/index.js"]

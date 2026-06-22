@@ -268,12 +268,136 @@ npm run build
 Källkoden är skriven i TypeScript med strict-läge. Nya funktioner och
 buggfixar utvecklas testdrivet enligt red–green–refactor.
 
+## Driftsättning i produktion
+
+Det här avsnittet är för dig som vill hosta appen på en egen server (t.ex.
+Ubuntu) bakom nginx. Den lokala `compose.yaml` används bara för utveckling – i
+produktion förutsätts en separat, redan körande PostgreSQL-databas.
+
+### Översikt
+
+Tre delar körs samtidigt, med nginx som enda sak som är öppen mot internet:
+
+```text
+                    ┌─────────── nginx (TLS, port 443) ───────────┐
+   Webbläsare  ───► │  /api/ + /socket.io/  ──►  backend  :3000   │
+                    │  allt annat           ──►  frontend :4000   │
+                    └─────────────────────────────────────────────┘
+                                   backend ──► PostgreSQL (separat server)
+```
+
+- **backend** – Express + Socket.IO, körs som container (`backend/Containerfile`).
+  Kör databasmigreringarna automatiskt vid uppstart.
+- **frontend** – Angular **SSR**-server, körs som container
+  (`frontend/Containerfile`). Hämtar en fråga på servern så att den finns i
+  HTML:en (bra för SEO och delningslänkar).
+- **PostgreSQL** – körs separat; backend ansluter via `DATABASE_URL`.
+
+### Miljövariabler
+
+Sätt dessa vid körning (inte i imagen). Backend:
+
+| Variabel | Krävs | Beskrivning |
+|----------|-------|-------------|
+| `NODE_ENV` | ja | `production` (slår på secure-cookies och `trust proxy`) |
+| `SESSION_SECRET` | ja | Hemlighet för sessions-cookien. Backend vägrar starta utan den |
+| `DATABASE_URL` | ja | T.ex. `postgres://user:pwd@db-server:5432/kalle` |
+| `API_KEY_ENCRYPTION_KEY` | nej* | Krävs om admins ska kunna spara egna OpenAI-nycklar |
+| `OPENAI_API_KEY` / `OPENAI_MODEL` | nej | Delad OpenAI-nyckel för AI-uppdatering av svar |
+| `PORT` | nej | Default `3000` |
+
+Frontend (SSR):
+
+| Variabel | Krävs | Beskrivning |
+|----------|-------|-------------|
+| `NG_ALLOWED_HOSTS` | ja | Din publika domän, t.ex. `kalle.example.com`. Utan den svarar SSR `400` (Angulars SSRF-skydd) |
+| `BACKEND_INTERNAL_URL` | ja | Var SSR-servern når backend internt, t.ex. `http://backend:3000` |
+| `PORT` | nej | Default `4000` |
+
+Generera hemligheter med:
+
+```sh
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
+
+### 1. Bygg containrarna
+
+```sh
+cd backend && podman build -t kalle-backend -f Containerfile .
+cd ../frontend && podman build -t kalle-frontend -f Containerfile .
+```
+
+### 2. Kör med ett gemensamt nätverk
+
+Containrarna måste ligga på samma podman-nätverk för att nå varandra på namn
+(`BACKEND_INTERNAL_URL=http://backend:3000` pekar på backend-containerns namn):
+
+```sh
+podman network create kalle-net
+
+podman run -d --name backend --network kalle-net \
+  -p 127.0.0.1:3000:3000 \
+  -e NODE_ENV=production \
+  -e SESSION_SECRET=<hemlig> \
+  -e DATABASE_URL=postgres://user:pwd@db-server:5432/kalle \
+  -e API_KEY_ENCRYPTION_KEY=<hemlig> \
+  kalle-backend
+
+podman run -d --name frontend --network kalle-net \
+  -p 127.0.0.1:4000:4000 \
+  -e NG_ALLOWED_HOSTS=kalle.example.com \
+  -e BACKEND_INTERNAL_URL=http://backend:3000 \
+  kalle-frontend
+```
+
+Portarna binds till `127.0.0.1` – bara nginx ska nå dem, inte internet direkt.
+
+> **Tips:** för autostart vid omstart och inbyggd healthcheck, använd Quadlet
+> (`.container`-filer som blir systemd-tjänster) i stället för lösa
+> `podman run`-kommandon.
+
+### 3. nginx som proxy
+
+Ett färdigt server-block finns i [`deploy/nginx/kalle.conf`](deploy/nginx/kalle.conf).
+Det proxar `/api/` och `/socket.io/` till backend och allt annat till Angular
+SSR-servern. Lägg filen i `/etc/nginx/conf.d/` (eller `sites-available/` +
+symlänk), justera `server_name`/`NG_ALLOWED_HOSTS`, och kör `sudo nginx -t`.
+
+TLS termineras av en proxy framför nginx, så nginx lyssnar på vanlig HTTP.
+Configen vidarebefordrar uppströmsproxyns `X-Forwarded-Proto` – det är viktigt:
+backend sätter i produktion `trust proxy` och `secure`-cookies, så den måste se
+`proto=https` för att inloggningen ska fungera. `/socket.io/` har dessutom
+WebSocket-headrarna, annars slutar AI-statusuppdateringarna fungera.
+
+### 4. Databas och migreringar
+
+Backend kör migreringarna automatiskt vid uppstart, så "deploya = starta
+backend-containern". Två saker att säkerställa:
+
+- Din PostgreSQL måste tillåta anslutning från serverns IP (brandvägg/pg_hba).
+- Databasen ska vara nåbar **innan** backend startar.
+
+### Driftsättnings-checklista
+
+- [ ] PostgreSQL körs och är nåbar via `DATABASE_URL`
+- [ ] `SESSION_SECRET` och ev. `API_KEY_ENCRYPTION_KEY` genererade
+- [ ] Båda imagerna byggda
+- [ ] Gemensamt podman-nätverk skapat, containrar startade och bundna till `127.0.0.1`
+- [ ] `NG_ALLOWED_HOSTS` satt till den publika domänen (matchar nginx `server_name`)
+- [ ] `deploy/nginx/kalle.conf` på plats, `nginx -t` ok, TLS terminerad uppströms
+- [ ] Adminkonto skapat (`npm run create-admin` mot produktionsdatabasen)
+
 ## Projektstruktur
 
 ```text
 kalle-fragesport/
-├── backend/       Express-API, databaslogik och migreringar
-├── frontend/      Angular-appen som visas i webbläsaren
-├── compose.yaml   Konfiguration för den lokala PostgreSQL-databasen
-└── README.md      Den här guiden
+├── backend/                  Express-API, databaslogik och migreringar
+│   └── Containerfile         Bygger backend-imagen (produktion)
+├── frontend/                 Angular-appen som visas i webbläsaren
+│   └── Containerfile         Bygger Angular SSR-imagen (produktion)
+├── deploy/
+│   ├── quadlet/              systemd/Quadlet-units för att köra containrarna
+│   └── nginx/kalle.conf      Färdigt nginx-server-block (proxy)
+├── compose.yaml              Lokal PostgreSQL-databas (endast utveckling)
+└── README.md                 Den här guiden
 ```

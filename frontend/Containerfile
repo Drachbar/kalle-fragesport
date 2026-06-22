@@ -1,0 +1,24 @@
+# Frontend: Angular SSR-server (Express via @angular/ssr).
+# SSR-bundlen är självständig – runtime behöver bara dist/frontend, inga node_modules.
+
+# ---- bygg browser- + server-bundle ----
+FROM node:24-bookworm-slim AS build
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# ---- runtime ----
+FROM node:24-bookworm-slim AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=4000
+# OBS: sätt även NG_ALLOWED_HOSTS=<din-domän> och BACKEND_INTERNAL_URL=http://backend:3000
+# vid körning (podman run -e / quadlet) – de är miljö-/driftberoende, inte bakade i imagen.
+
+COPY --from=build /app/dist/frontend ./dist/frontend
+
+EXPOSE 4000
+USER node
+CMD ["node", "dist/frontend/server/server.mjs"]

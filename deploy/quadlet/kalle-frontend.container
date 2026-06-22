@@ -1,0 +1,20 @@
+[Unit]
+Description=Kalle Frågesport frontend (Angular SSR)
+# Starta efter backend så namnuppslaget backend:3000 finns när SSR kör.
+After=kalle-backend.service
+Wants=kalle-backend.service
+
+[Container]
+Image=localhost/kalle-frontend:latest
+ContainerName=kalle-frontend
+Network=kalle.network
+# Endast nginx på värden ska nå porten, inte internet.
+PublishPort=127.0.0.1:4000:4000
+# NG_ALLOWED_HOSTS + BACKEND_INTERNAL_URL sätts här. Se frontend.env.example.
+EnvironmentFile=/etc/kalle/frontend.env
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target

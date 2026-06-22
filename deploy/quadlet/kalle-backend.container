@@ -1,0 +1,26 @@
+[Unit]
+Description=Kalle Frågesport backend (Express + Socket.IO)
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=localhost/kalle-backend:latest
+ContainerName=kalle-backend
+Network=kalle.network
+# Frontend-containern når backend via http://backend:3000.
+NetworkAlias=backend
+# Endast nginx på värden ska nå porten, inte internet.
+PublishPort=127.0.0.1:3000:3000
+# Hemligheter/konfig ligger på servern, utanför git. Se backend.env.example.
+EnvironmentFile=/etc/kalle/backend.env
+# Healthcheck mot /health (Node 24 har global fetch).
+HealthCmd=node -e "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+HealthInterval=30s
+HealthStartPeriod=20s
+HealthTimeout=3s
+
+[Service]
+Restart=always
+
+[Install]
+WantedBy=default.target

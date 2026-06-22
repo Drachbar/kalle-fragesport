@@ -1,0 +1,3 @@
+# Gemensamt nätverk så backend och frontend når varandra på namn.
+# Quadlet skapar ett podman-nät som heter "systemd-kalle".
+[Network]
