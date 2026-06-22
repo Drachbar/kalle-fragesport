@@ -1,3 +1,4 @@
+import { PLATFORM_ID, TransferState, makeStateKey } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, Router, convertToParamMap } from '@angular/router';
 import { BehaviorSubject, of } from 'rxjs';
@@ -23,6 +24,7 @@ function configure(options: {
   initialId?: string | null;
   random?: ReturnType<typeof vi.fn>;
   get?: ReturnType<typeof vi.fn>;
+  platform?: 'browser' | 'server';
 }) {
   const paramMap$ = new BehaviorSubject(
     convertToParamMap(options.initialId ? { id: options.initialId } : {}),
@@ -37,6 +39,7 @@ function configure(options: {
       { provide: QuestionsService, useValue: { random, get } },
       { provide: ActivatedRoute, useValue: { paramMap: paramMap$ } },
       { provide: Router, useValue: { navigate } },
+      { provide: PLATFORM_ID, useValue: options.platform ?? 'browser' },
     ],
   });
 
@@ -116,6 +119,85 @@ describe('Home', () => {
     expect(navigate).toHaveBeenCalledWith(['/quiz', 'q-3'], {
       replaceUrl: false,
     });
+  });
+
+  it('hämtar den specifika frågan på servern (SSR) för bra SEO', async () => {
+    const get = vi.fn((id: string) =>
+      of(makeQuestion({ id, question: 'Fråga på servern' })),
+    );
+    const { random } = configure({
+      initialId: 'q-9',
+      get,
+      platform: 'server',
+    });
+    const fixture = TestBed.createComponent(Home);
+    await fixture.whenStable();
+
+    expect(get).toHaveBeenCalledWith('q-9');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Fråga på servern',
+    );
+    expect(random).not.toHaveBeenCalled();
+  });
+
+  it('hämtar och renderar en slumpfråga på servern (SSR) utan att redirecta', async () => {
+    const random = vi.fn(() => of(makeQuestion({ id: 'q-3', question: 'Slump på servern' })));
+    const { navigate } = configure({ random, platform: 'server' });
+    const fixture = TestBed.createComponent(Home);
+    await fixture.whenStable();
+
+    expect(random).toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Slump på servern',
+    );
+
+    const ts = TestBed.inject(TransferState);
+    expect(ts.get(makeStateKey('home:randomId'), null)).toBe('q-3');
+    expect(ts.get(makeStateKey('question:q-3'), null)).toBeTruthy();
+  });
+
+  it('återanvänder SSR-slumpfrågan: speglar id:t i url:en utan nytt anrop', async () => {
+    const random = vi.fn(() => of(makeQuestion()));
+    const { navigate } = configure({ random, platform: 'browser' });
+    // Simulera att servern slumpade fram en fråga och la id:t i transfer-staten.
+    TestBed.inject(TransferState).set(makeStateKey<string>('home:randomId'), 'q-5');
+
+    const fixture = TestBed.createComponent(Home);
+    await fixture.whenStable();
+
+    expect(random).not.toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith(['/quiz', 'q-5'], {
+      replaceUrl: true,
+    });
+  });
+
+  it('lägger den serverhämtade frågan i TransferState åt klienten', async () => {
+    const get = vi.fn((id: string) => of(makeQuestion({ id })));
+    configure({ initialId: 'q-9', get, platform: 'server' });
+    const fixture = TestBed.createComponent(Home);
+    await fixture.whenStable();
+
+    const ts = TestBed.inject(TransferState);
+    expect(ts.get(makeStateKey('question:q-9'), null)).toBeTruthy();
+  });
+
+  it('återanvänder SSR-frågan från TransferState utan ett extra anrop', async () => {
+    const get = vi.fn((id: string) => of(makeQuestion({ id })));
+    configure({ initialId: 'q-9', get, platform: 'browser' });
+    // Simulera att servern redan la frågan i transfer-staten.
+    TestBed.inject(TransferState).set(
+      makeStateKey<Question>('question:q-9'),
+      makeQuestion({ id: 'q-9', question: 'Från servern' }),
+    );
+
+    const fixture = TestBed.createComponent(Home);
+    await fixture.whenStable();
+
+    expect(get).not.toHaveBeenCalled();
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain(
+      'Från servern',
+    );
   });
 
   it('visar rätt svar när man klickar "Visa svar"', async () => {

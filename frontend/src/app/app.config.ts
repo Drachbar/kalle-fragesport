@@ -7,19 +7,23 @@ import {
 } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { provideRouter } from '@angular/router';
-import { provideHttpClient } from '@angular/common/http';
+import {
+  provideHttpClient,
+  withInterceptors,
+} from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 
 import { routes } from './app.routes';
 import { provideClientHydration, withEventReplay, withNoIncrementalHydration } from '@angular/platform-browser';
 import { AuthService } from './auth/auth.service';
+import { apiBaseUrlInterceptor } from './shared/api-base-url';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
     provideClientHydration(withEventReplay(), withNoIncrementalHydration()),
-    provideHttpClient(),
+    provideHttpClient(withInterceptors([apiBaseUrlInterceptor])),
     // Återställ inloggningsstatus vid uppstart – bara i webbläsaren, eftersom
     // sessionscookien inte finns tillgänglig under server-rendering.
     provideAppInitializer(() => {
