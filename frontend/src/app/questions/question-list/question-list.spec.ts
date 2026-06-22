@@ -229,4 +229,84 @@ describe('QuestionList', () => {
       'Auto-uppdatera svar',
     );
   });
+
+  describe('sortering', () => {
+    function titles(fixture: { nativeElement: unknown }): string[] {
+      const el = fixture.nativeElement as HTMLElement;
+      return Array.from(el.querySelectorAll('.question-main h2')).map((h) =>
+        (h.textContent ?? '').trim(),
+      );
+    }
+
+    function selectSort(
+      fixture: { nativeElement: unknown; detectChanges: () => void },
+      value: string,
+    ): void {
+      const el = fixture.nativeElement as HTMLElement;
+      const select = el.querySelector('select') as HTMLSelectElement;
+      select.value = value;
+      select.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+    }
+
+    const older = makeQuestion({
+      id: 'old',
+      question: 'Äldre fråga',
+      category: 'Zoologi',
+      autoUpdate: false,
+      createdAt: '2024-01-01T00:00:00.000Z',
+      updatedAt: '2024-06-01T00:00:00.000Z',
+    });
+    const newer = makeQuestion({
+      id: 'new',
+      question: 'Nyare fråga',
+      category: 'Astronomi',
+      autoUpdate: true,
+      createdAt: '2024-03-01T00:00:00.000Z',
+      updatedAt: '2024-02-01T00:00:00.000Z',
+    });
+
+    it('sorterar nyast skapad först som standard', async () => {
+      const { http } = configure({ isAdmin: true });
+      const fixture = await setup(http, [older, newer]);
+
+      expect(titles(fixture)).toEqual(['Nyare fråga', 'Äldre fråga']);
+    });
+
+    it('kan sortera efter äldst skapad', async () => {
+      const { http } = configure({ isAdmin: true });
+      const fixture = await setup(http, [older, newer]);
+
+      selectSort(fixture, 'created-asc');
+
+      expect(titles(fixture)).toEqual(['Äldre fråga', 'Nyare fråga']);
+    });
+
+    it('kan sortera efter senast uppdaterad', async () => {
+      const { http } = configure({ isAdmin: true });
+      const fixture = await setup(http, [older, newer]);
+
+      selectSort(fixture, 'updated-desc');
+
+      expect(titles(fixture)).toEqual(['Äldre fråga', 'Nyare fråga']);
+    });
+
+    it('kan visa auto-uppdaterade frågor först', async () => {
+      const { http } = configure({ isAdmin: true });
+      const fixture = await setup(http, [older, newer]);
+
+      selectSort(fixture, 'autoupdate-first');
+
+      expect(titles(fixture)).toEqual(['Nyare fråga', 'Äldre fråga']);
+    });
+
+    it('kan sortera efter kategori (A–Ö)', async () => {
+      const { http } = configure({ isAdmin: true });
+      const fixture = await setup(http, [older, newer]);
+
+      selectSort(fixture, 'category-asc');
+
+      expect(titles(fixture)).toEqual(['Nyare fråga', 'Äldre fråga']);
+    });
+  });
 });

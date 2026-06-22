@@ -37,8 +37,20 @@
 } @else if (questions.value().length === 0) {
   <p>Inga frågor än.</p>
 } @else {
+  <div class="sort-bar">
+    <label for="sort-questions">Sortera</label>
+    <select
+      id="sort-questions"
+      [value]="sortKey()"
+      (change)="setSort($any($event.target).value)"
+    >
+      @for (option of sortOptions; track option.value) {
+        <option [value]="option.value">{{ option.label }}</option>
+      }
+    </select>
+  </div>
   <ul class="question-list">
-    @for (q of questions.value(); track q.id) {
+    @for (q of sortedQuestions(); track q.id) {
       <li class="question-card">
         <div class="question-main">
           <h2>{{ q.question }}</h2>
