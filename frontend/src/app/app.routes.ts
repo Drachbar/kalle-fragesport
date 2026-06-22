@@ -46,4 +46,10 @@ export const routes: Routes = [
         (m) => m.QuestionForm,
       ),
   },
+  {
+    path: 'settings',
+    canActivate: [adminGuard],
+    loadComponent: () =>
+      import('./settings/settings/settings').then((m) => m.Settings),
+  },
 ];

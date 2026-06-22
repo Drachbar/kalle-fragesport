@@ -6,6 +6,7 @@ import { DbSessionStore } from "./auth/session-store";
 import { createAuthRouter } from "./auth/auth.routes";
 import { createQuestionsRouter } from "./questions/questions.routes";
 import { createAutoUpdateRouter } from "./ai/auto-update.routes";
+import { createSettingsRouter } from "./settings/settings.routes";
 import { createJobStatusSocket } from "./ai/job-status.socket";
 import { loadBackendEnv } from "./load-env";
 
@@ -53,6 +54,7 @@ app.get("/health", (_req: Request, res: Response) => {
 
 // API:t exponeras under /api (matchar frontends proxy.conf.json).
 app.use("/api/auth", createAuthRouter());
+app.use("/api/settings", createSettingsRouter());
 // AI-routerna måste ligga före questions-routern så att t.ex.
 // /api/questions/suggestions inte fångas av GET /:id.
 app.use("/api/questions", createAutoUpdateRouter());

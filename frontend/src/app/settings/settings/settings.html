@@ -1,0 +1,67 @@
+<section class="settings">
+  <h1>Inställningar</h1>
+
+  @if (loading()) {
+    <p>Laddar…</p>
+  } @else if (status(); as s) {
+    <h2>OpenAI-nyckel</h2>
+
+    @if (s.envKeyPresent) {
+      <p class="info">
+        En delad OpenAI-nyckel är konfigurerad på servern och används för
+        AI-uppdateringar. Du behöver inte ange en egen.
+      </p>
+    } @else {
+      @if (s.userKeySet) {
+        <p class="info">
+          Du har en sparad egen OpenAI-nyckel. AI-uppdateringar använder din
+          egen usage. Du kan byta nyckel eller ta bort den.
+        </p>
+      } @else {
+        <p class="info">
+          Ingen delad nyckel finns. Ange en egen OpenAI-nyckel så används din
+          egen usage för AI-uppdateringar. Nyckeln lagras krypterat.
+        </p>
+      }
+
+      <form [formGroup]="form" (ngSubmit)="save()">
+        <label for="apiKey">OpenAI API-nyckel</label>
+        <input
+          id="apiKey"
+          type="password"
+          formControlName="apiKey"
+          autocomplete="off"
+          placeholder="sk-…"
+        />
+        @if (form.controls.apiKey.touched && form.controls.apiKey.invalid) {
+          <p class="field-error" role="alert">
+            Ange en giltig nyckel som börjar med "sk-".
+          </p>
+        }
+
+        <div class="actions">
+          <button type="submit" class="btn btn-primary" [disabled]="saving()">
+            {{ s.userKeySet ? 'Byt nyckel' : 'Spara nyckel' }}
+          </button>
+          @if (s.userKeySet) {
+            <button
+              type="button"
+              class="btn btn-ghost"
+              [disabled]="saving()"
+              (click)="remove()"
+            >
+              Ta bort nyckel
+            </button>
+          }
+        </div>
+      </form>
+    }
+
+    @if (saved()) {
+      <p class="success" role="status">Nyckeln sparades.</p>
+    }
+    @if (error(); as e) {
+      <p class="error" role="alert">{{ e }}</p>
+    }
+  }
+</section>

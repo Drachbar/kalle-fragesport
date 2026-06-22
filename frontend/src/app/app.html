@@ -6,6 +6,9 @@
     </div>
     <div class="nav-actions">
       @if (auth.isLoggedIn()) {
+        @if (auth.isAdmin()) {
+          <a routerLink="/settings">Inställningar</a>
+        }
         <span class="user">{{ auth.currentUser()?.email }}</span>
         <button type="button" class="btn btn-ghost" (click)="logout()">
           Logga ut

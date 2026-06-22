@@ -14,8 +14,10 @@ import {
 } from "../questions/suggestions.repository";
 import type { QuestionInput } from "../questions/questions.types";
 import type { AnswerResearcher } from "./answer-researcher";
-import { createResearcherFromEnv } from "./openai-client";
+import { createResearcherFromKey } from "./openai-client";
 import { runAutoUpdateJob } from "./answer-update.service";
+import { openAiKeysRepository } from "../users/openai-keys.repository";
+import { decryptSecret } from "../security/crypto";
 
 export interface AutoUpdateRouterDeps {
   questionsRepo: Pick<
@@ -30,37 +32,70 @@ export interface AutoUpdateRouterDeps {
     SuggestionsRepository,
     "create" | "listPending" | "getById" | "setStatus"
   >;
-  createResearcher: () => AnswerResearcher;
+  /**
+   * Slår upp vilken OpenAI-nyckel som ska användas. Env-nyckel först (delad);
+   * saknas den används den inloggade adminens egna sparade nyckel.
+   * Returnerar null om ingen nyckel finns.
+   */
+  resolveApiKey: (userId: string) => Promise<string | null>;
+  createResearcher: (apiKey: string) => AnswerResearcher;
   runJob: typeof runAutoUpdateJob;
+}
+
+/** Standard nyckel-resolution: env-nyckel först, annars användarens egna. */
+async function resolveApiKeyFromEnvOrUser(
+  userId: string,
+): Promise<string | null> {
+  const envKey = process.env.OPENAI_API_KEY;
+  if (envKey) {
+    return envKey;
+  }
+  const encrypted = await openAiKeysRepository.getEncryptedKey(userId);
+  return encrypted ? decryptSecret(encrypted) : null;
 }
 
 const defaultDeps: AutoUpdateRouterDeps = {
   questionsRepo: questionsRepository,
   jobsRepo: jobsRepository,
   suggestionsRepo: suggestionsRepository,
-  createResearcher: () => createResearcherFromEnv(),
+  resolveApiKey: resolveApiKeyFromEnvOrUser,
+  createResearcher: (apiKey) => createResearcherFromKey(apiKey),
   runJob: runAutoUpdateJob,
 };
 
 export function createAutoUpdateRouter(
   deps: AutoUpdateRouterDeps = defaultDeps,
 ): Router {
-  const { questionsRepo, jobsRepo, suggestionsRepo, createResearcher, runJob } =
-    deps;
+  const {
+    questionsRepo,
+    jobsRepo,
+    suggestionsRepo,
+    resolveApiKey,
+    createResearcher,
+    runJob,
+  } = deps;
   const router = Router();
 
   // Starta ett bakgrundsjobb som går igenom tidskänsliga frågor.
-  router.post("/auto-update", requireAdmin, async (_req, res) => {
+  router.post("/auto-update", requireAdmin, async (req, res) => {
     if (await jobsRepo.hasActive()) {
       res.status(409).json({ error: "Ett jobb kör redan" });
       return;
     }
 
-    // Skapa researchern först – misslyckas den (t.ex. saknad nyckel) skapar
-    // vi inget jobb.
+    // Lös upp nyckeln (env först, annars adminens egna) och skapa researchern.
+    // Misslyckas något (saknad/ogiltig nyckel) skapar vi inget jobb.
     let researcher: AnswerResearcher;
     try {
-      researcher = createResearcher();
+      const apiKey = await resolveApiKey(req.session.userId as string);
+      if (!apiKey) {
+        res.status(503).json({
+          error:
+            "Ingen OpenAI-nyckel konfigurerad – ange en egen under Inställningar",
+        });
+        return;
+      }
+      researcher = createResearcher(apiKey);
     } catch (err) {
       res.status(503).json({
         error: err instanceof Error ? err.message : "AI ej tillgänglig",

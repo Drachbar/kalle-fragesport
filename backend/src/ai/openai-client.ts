@@ -7,20 +7,19 @@ import {
 } from "./openai-researcher";
 
 /**
- * Skapar en riktig OpenAI-baserad researcher från miljövariabler.
+ * Skapar en riktig OpenAI-baserad researcher från en explicit nyckel.
  * Anropas först när ett jobb startas, så att appen kan köra utan nyckel
  * tills funktionen faktiskt används.
  */
-export function createResearcherFromEnv(
-  env: NodeJS.ProcessEnv = process.env,
+export function createResearcherFromKey(
+  apiKey: string,
+  model: string = process.env.OPENAI_MODEL ?? "gpt-5",
 ): AnswerResearcher {
-  const apiKey = env.OPENAI_API_KEY;
   if (!apiKey) {
-    throw new Error("OPENAI_API_KEY måste sättas för AI-uppdatering av svar");
+    throw new Error("Ingen OpenAI-nyckel angiven för AI-uppdatering av svar");
   }
 
   const client = new OpenAI({ apiKey });
-  const model = env.OPENAI_MODEL ?? "gpt-5";
 
   return createOpenAiResearcher({
     model,

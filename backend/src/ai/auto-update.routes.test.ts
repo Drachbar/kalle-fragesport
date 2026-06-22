@@ -73,6 +73,7 @@ function makeDeps(over: Partial<AutoUpdateRouterDeps> = {}): AutoUpdateRouterDep
       getById: vi.fn().mockResolvedValue(makeSuggestion()),
       setStatus: vi.fn().mockResolvedValue(makeSuggestion({ status: "approved" })),
     },
+    resolveApiKey: vi.fn().mockResolvedValue("sk-test-nyckel"),
     createResearcher: vi.fn().mockReturnValue({ research: vi.fn() }),
     runJob: vi.fn().mockResolvedValue(undefined),
     ...over,
@@ -127,16 +128,38 @@ describe("POST /questions/auto-update (admin)", () => {
     expect(deps.jobsRepo.create).not.toHaveBeenCalled();
   });
 
-  it("svarar 503 om researchern inte kan skapas (saknar API-nyckel)", async () => {
+  it("svarar 503 om researchern inte kan skapas (ogiltig API-nyckel)", async () => {
     const deps = makeDeps({
       createResearcher: vi.fn(() => {
-        throw new Error("OPENAI_API_KEY måste sättas");
+        throw new Error("Ingen OpenAI-nyckel angiven");
       }),
     });
     const res = await request(makeApp(deps, adminSession)).post("/questions/auto-update");
 
     expect(res.status).toBe(503);
     expect(deps.jobsRepo.create).not.toHaveBeenCalled();
+  });
+
+  it("svarar 503 om ingen nyckel kunde lösas upp (varken env eller egen)", async () => {
+    const deps = makeDeps({
+      resolveApiKey: vi.fn().mockResolvedValue(null),
+    });
+    const res = await request(makeApp(deps, adminSession)).post("/questions/auto-update");
+
+    expect(res.status).toBe(503);
+    expect(deps.createResearcher).not.toHaveBeenCalled();
+    expect(deps.jobsRepo.create).not.toHaveBeenCalled();
+  });
+
+  it("använder den upplösta nyckeln för den inloggade adminen", async () => {
+    const deps = makeDeps({
+      resolveApiKey: vi.fn().mockResolvedValue("sk-egen-nyckel"),
+    });
+    const res = await request(makeApp(deps, adminSession)).post("/questions/auto-update");
+
+    expect(res.status).toBe(201);
+    expect(deps.resolveApiKey).toHaveBeenCalledWith("id-1");
+    expect(deps.createResearcher).toHaveBeenCalledWith("sk-egen-nyckel");
   });
 
   it("svarar 403 för icke-admin", async () => {
