@@ -1,6 +1,9 @@
 import { z } from "zod";
 import type { Question } from "../questions/questions.types";
 import type { AnswerResearcher, ResearchResult } from "./answer-researcher";
+import { createLogger } from "../logging/logger";
+
+const log = createLogger("ai:researcher");
 
 /**
  * Minimal typ för OpenAI Responses API-anropet. Vi typar bara det vi använder
@@ -126,14 +129,30 @@ export function createOpenAiResearcher(opts: {
 }): AnswerResearcher {
   return {
     async research(question) {
-      const response = await opts.create(
-        buildResearchRequest(question, opts.model),
-      );
+      const request = buildResearchRequest(question, opts.model);
+      log.debug("Skickar förfrågan till OpenAI", {
+        questionId: question.id,
+        model: opts.model,
+        tools: request.tools?.map((t) => t.type),
+      });
+      const start = Date.now();
+      const response = await opts.create(request);
+      log.debug("Rå-svar mottaget från OpenAI", {
+        questionId: question.id,
+        outputLength: response.output_text.length,
+        durationMs: Date.now() - start,
+      });
+
       const result = parseResearchResult(response.output_text);
       if (
         question.type === "multiple_choice" &&
         !result.suggestedOptions.includes(result.suggestedAnswer)
       ) {
+        log.warn("AI-svaret saknas bland alternativen", {
+          questionId: question.id,
+          suggestedAnswer: result.suggestedAnswer,
+          suggestedOptions: result.suggestedOptions,
+        });
         throw new Error("AI-svaret saknas bland de föreslagna alternativen");
       }
       return result;

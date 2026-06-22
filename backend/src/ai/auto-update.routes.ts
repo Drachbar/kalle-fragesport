@@ -19,6 +19,9 @@ import { createResearcherFromKey } from "./openai-client";
 import { runAutoUpdateJob } from "./answer-update.service";
 import { openAiKeysRepository } from "../users/openai-keys.repository";
 import { decryptSecret } from "../security/crypto";
+import { createLogger } from "../logging/logger";
+
+const log = createLogger("ai:auto-update");
 
 export interface AutoUpdateRouterDeps {
   questionsRepo: Pick<
@@ -49,10 +52,16 @@ async function resolveApiKeyFromEnvOrUser(
 ): Promise<string | null> {
   const envKey = process.env.OPENAI_API_KEY;
   if (envKey) {
+    log.debug("Använder OpenAI-nyckel från miljön", { userId });
     return envKey;
   }
   const encrypted = await openAiKeysRepository.getEncryptedKey(userId);
-  return encrypted ? decryptSecret(encrypted) : null;
+  if (encrypted) {
+    log.debug("Använder adminens egna sparade OpenAI-nyckel", { userId });
+    return decryptSecret(encrypted);
+  }
+  log.warn("Ingen OpenAI-nyckel hittades (varken env eller egen)", { userId });
+  return null;
 }
 
 const defaultDeps: AutoUpdateRouterDeps = {
@@ -83,13 +92,20 @@ export function createAutoUpdateRouter(
   // Starta ett bakgrundsjobb. Utan questionId körs alla tidskänsliga frågor;
   // med questionId uppdateras enbart den valda frågan.
   router.post("/auto-update", requireAdmin, async (req, res) => {
+    const userId = req.session.userId as string;
     const parsed = startSchema.safeParse(req.body ?? {});
     if (!parsed.success) {
+      log.warn("Avvisar auto-update: ogiltig body", { userId });
       res.status(400).json({ error: "Ogiltig fråga" });
       return;
     }
+    log.info("Begäran om auto-uppdatering", {
+      userId,
+      questionId: parsed.data.questionId,
+    });
 
     if (await jobsRepo.hasActive()) {
+      log.info("Avvisar auto-update: ett jobb kör redan", { userId });
       res.status(409).json({ error: "Ett jobb kör redan" });
       return;
     }
@@ -98,7 +114,7 @@ export function createAutoUpdateRouter(
     // Misslyckas något (saknad/ogiltig nyckel) skapar vi inget jobb.
     let researcher: AnswerResearcher;
     try {
-      const apiKey = await resolveApiKey(req.session.userId as string);
+      const apiKey = await resolveApiKey(userId);
       if (!apiKey) {
         res.status(503).json({
           error:
@@ -108,6 +124,7 @@ export function createAutoUpdateRouter(
       }
       researcher = createResearcher(apiKey);
     } catch (err) {
+      log.error("Kunde inte skapa AI-researcher", { userId, err });
       res.status(503).json({
         error: err instanceof Error ? err.message : "AI ej tillgänglig",
       });
@@ -115,6 +132,11 @@ export function createAutoUpdateRouter(
     }
 
     const job = await jobsRepo.create();
+    log.info("Jobb skapat, kör i bakgrunden", {
+      userId,
+      jobId: job.id,
+      questionId: parsed.data.questionId,
+    });
     // Kör i bakgrunden – vi väntar inte in resultatet.
     void runJob(job.id, {
       questionsRepo,

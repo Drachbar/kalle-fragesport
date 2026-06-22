@@ -3,6 +3,9 @@ import type { Question } from "../questions/questions.types";
 import type { SuggestionsRepository } from "../questions/suggestions.repository";
 import type { JobsRepository } from "../questions/jobs.repository";
 import type { AnswerResearcher } from "./answer-researcher";
+import { createLogger } from "../logging/logger";
+
+const baseLog = createLogger("ai:job");
 
 function optionsEqual(left: string[], right: string[]): boolean {
   return (
@@ -46,20 +49,46 @@ export async function runAutoUpdateJob(
 ): Promise<void> {
   const { questionsRepo, suggestionsRepo, jobsRepo, researcher, questionId } =
     deps;
+  const log = baseLog.child(jobId);
+  const startedAt = Date.now();
+
+  log.info("Startar auto-uppdateringsjobb", {
+    jobId,
+    mode: questionId ? "single" : "all",
+    questionId,
+  });
 
   try {
     // En specifik fråga (vald av admin) eller alla auto-uppdaterade frågor.
     const questions = questionId
       ? await resolveSingleQuestion(questionsRepo, questionId)
       : await questionsRepo.listAutoUpdate();
+    log.info("Frågor att bearbeta upplösta", { total: questions.length });
     await jobsRepo.update(jobId, { status: "running", total: questions.length });
 
     let processed = 0;
     let suggestionsCreated = 0;
 
     for (const question of questions) {
+      const questionStart = Date.now();
+      log.info("Granskar fråga", {
+        questionId: question.id,
+        type: question.type,
+        question: question.question,
+        currentAnswer: question.answer,
+        index: processed + 1,
+        total: questions.length,
+      });
       try {
         const result = await researcher.research(question);
+        log.debug("AI-svar mottaget", {
+          questionId: question.id,
+          changed: result.changed,
+          suggestedAnswer: result.suggestedAnswer,
+          confidence: result.confidence,
+          sources: result.sources,
+          durationMs: Date.now() - questionStart,
+        });
 
         const suggestedOptions =
           question.type === "multiple_choice"
@@ -84,10 +113,24 @@ export async function runAutoUpdateJob(
             confidence: result.confidence,
           });
           suggestionsCreated += 1;
+          log.info("Förslag skapat", {
+            questionId: question.id,
+            answerChanged,
+            optionsChanged,
+            previousAnswer: question.answer,
+            suggestedAnswer: result.suggestedAnswer,
+          });
+        } else {
+          log.info("Inget förslag – svaret är oförändrat", {
+            questionId: question.id,
+            changed: result.changed,
+            answerChanged,
+            optionsChanged,
+          });
         }
       } catch (err) {
         // Ett fel på en enskild fråga ska inte stoppa hela jobbet.
-        console.error(`Kunde inte uppdatera fråga ${question.id}:`, err);
+        log.error("Kunde inte uppdatera fråga", { questionId: question.id, err });
       } finally {
         processed += 1;
         await jobsRepo.update(jobId, { processed, suggestionsCreated });
@@ -98,7 +141,13 @@ export async function runAutoUpdateJob(
       status: "completed",
       finishedAt: new Date(),
     });
+    log.info("Jobb klart", {
+      processed,
+      suggestionsCreated,
+      durationMs: Date.now() - startedAt,
+    });
   } catch (err) {
+    log.error("Jobb misslyckades", { err, durationMs: Date.now() - startedAt });
     await jobsRepo.update(jobId, {
       status: "failed",
       error: err instanceof Error ? err.message : String(err),

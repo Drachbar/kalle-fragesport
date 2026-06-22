@@ -6,6 +6,9 @@ import {
   type OpenAiKeysRepository,
 } from "../users/openai-keys.repository";
 import { encryptSecret } from "../security/crypto";
+import { createLogger } from "../logging/logger";
+
+const log = createLogger("settings");
 
 const apiKeySchema = z.object({
   // OpenAI-nycklar börjar med "sk-". Endast format-koll, inget testanrop.
@@ -54,12 +57,18 @@ export function createSettingsRouter(
   router.put("/openai-key", requireAdmin, async (req, res) => {
     const parsed = apiKeySchema.safeParse(req.body);
     if (!parsed.success) {
+      const userId = req.session.userId as string;
+      log.warn("Avvisar nyckel: ogiltigt format", { userId });
       res.status(400).json({ error: "Ogiltig OpenAI-nyckel" });
       return;
     }
 
     const userId = req.session.userId as string;
     await keysRepo.setKey(userId, encrypt(parsed.data.apiKey));
+    log.info("OpenAI-nyckel sparad för användare", {
+      userId,
+      keySuffix: parsed.data.apiKey.slice(-4),
+    });
     res.status(204).end();
   });
 
@@ -67,6 +76,7 @@ export function createSettingsRouter(
   router.delete("/openai-key", requireAdmin, async (req, res) => {
     const userId = req.session.userId as string;
     await keysRepo.deleteKey(userId);
+    log.info("OpenAI-nyckel borttagen för användare", { userId });
     res.status(204).end();
   });
 

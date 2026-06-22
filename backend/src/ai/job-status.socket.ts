@@ -10,6 +10,9 @@ import {
   PgJobStatusListener,
   type JobStatusListener,
 } from "./job-status-listener";
+import { createLogger } from "../logging/logger";
+
+const log = createLogger("ai:socket");
 
 const ROOM_PREFIX = "job:";
 
@@ -115,9 +118,11 @@ export async function createJobStatusSocket(
             return;
           }
 
+          log.debug("Klient prenumererar på jobb", { jobId });
           socket.emit("job-status", publicStatus(job));
           acknowledge?.({ ok: true });
-        } catch {
+        } catch (err) {
+          log.error("Kunde inte starta prenumeration", { jobId, err });
           await socket.leave(`${ROOM_PREFIX}${jobId}`);
           acknowledge?.({ ok: false, error: "Kunde inte läsa jobbstatus" });
         }
@@ -127,13 +132,15 @@ export async function createJobStatusSocket(
 
   await deps.listener.start({
     onJobChanged: (jobId) => {
+      log.debug("Jobbstatus ändrad – skickar till klienter", { jobId });
       void emitCurrent(jobId).catch((error: unknown) =>
-        console.error("Kunde inte skicka jobbstatus:", error),
+        log.error("Kunde inte skicka jobbstatus", { jobId, err: error }),
       );
     },
     onReconnect: () => {
+      log.info("Återansluten till databasens notify-kanal – synkar rum");
       void resyncRooms().catch((error: unknown) =>
-        console.error("Kunde inte synkronisera jobbstatus:", error),
+        log.error("Kunde inte synkronisera jobbstatus", { err: error }),
       );
     },
   });

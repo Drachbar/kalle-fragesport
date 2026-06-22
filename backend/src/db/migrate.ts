@@ -1,6 +1,9 @@
 import path from "node:path";
 import Postgrator from "postgrator";
 import { getDatabase, type Database } from "./index";
+import { createLogger } from "../logging/logger";
+
+const log = createLogger("db:migrate");
 
 /**
  * Kör databasmigreringar med Postgrator mot målversionen (default: senaste).
@@ -16,6 +19,7 @@ export async function runMigrations(
   database: Database = getDatabase(),
 ) {
   return database.runExclusive(async () => {
+    log.info("Kör migreringar", { target: target ?? "senaste" });
     const postgrator = new Postgrator({
       driver: "pg",
       // Inget `database` behövs: information_schema innehåller bara den aktuella
@@ -28,9 +32,11 @@ export async function runMigrations(
     });
 
     postgrator.on("migration-started", (m) =>
-      console.log(`→ ${m.action} ${m.version}: ${m.name}`),
+      log.info("Migrering", { action: m.action, version: m.version, name: m.name }),
     );
 
-    return postgrator.migrate(target);
+    const applied = await postgrator.migrate(target);
+    log.info("Migreringar klara", { applied: applied.length });
+    return applied;
   });
 }

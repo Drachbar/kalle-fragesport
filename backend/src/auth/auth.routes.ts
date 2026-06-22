@@ -6,6 +6,9 @@ import {
   EmailAlreadyInUseError,
 } from "./auth.service";
 import { usersRepository } from "../users/users.repository";
+import { createLogger } from "../logging/logger";
+
+const log = createLogger("auth");
 
 const registerSchema = z.object({
   email: z.email(),
@@ -44,9 +47,13 @@ export function createAuthRouter(deps: AuthRouterDeps = defaultDeps): Router {
         parsed.data.email,
         parsed.data.password,
       );
+      log.info("Ny användare registrerad", { userId: user.id, email: user.email });
       res.status(201).json({ id: user.id, email: user.email, role: user.role });
     } catch (err) {
       if (err instanceof EmailAlreadyInUseError) {
+        log.warn("Registrering avvisad: e-post upptagen", {
+          email: parsed.data.email,
+        });
         res.status(409).json({ error: err.message });
         return;
       }
@@ -63,10 +70,12 @@ export function createAuthRouter(deps: AuthRouterDeps = defaultDeps): Router {
 
     const user = await deps.loginUser(parsed.data.email, parsed.data.password);
     if (!user) {
+      log.warn("Misslyckad inloggning", { email: parsed.data.email });
       // Generiskt fel för att inte avslöja om e-posten finns.
       res.status(401).json({ error: "Fel e-post eller lösenord" });
       return;
     }
+    log.info("Lyckad inloggning", { userId: user.id, role: user.role });
 
     // Mot session fixation: ny session-id vid inloggning.
     req.session.regenerate((err) => {

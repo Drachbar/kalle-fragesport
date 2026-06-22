@@ -9,8 +9,12 @@ import { createAutoUpdateRouter } from "./ai/auto-update.routes";
 import { createSettingsRouter } from "./settings/settings.routes";
 import { createJobStatusSocket } from "./ai/job-status.socket";
 import { loadBackendEnv } from "./load-env";
+import { createLogger } from "./logging/logger";
+import { createRequestLogger } from "./logging/request-logger";
 
 loadBackendEnv();
+
+const log = createLogger("server");
 
 const app = express();
 const httpServer = createServer(app);
@@ -43,6 +47,7 @@ const sessionMiddleware = session({
   },
 });
 app.use(sessionMiddleware);
+app.use(createRequestLogger());
 
 app.get("/", (_req: Request, res: Response) => {
   res.json({ message: "Hej från Kalle Frågesport backend!" });
@@ -61,14 +66,15 @@ app.use("/api/questions", createAutoUpdateRouter());
 app.use("/api/questions", createQuestionsRouter());
 
 async function start(): Promise<void> {
+  log.info("Startar server", { port, isProd });
   await runMigrations();
   await createJobStatusSocket(httpServer, sessionMiddleware);
   httpServer.listen(port, () => {
-    console.log(`Servern lyssnar på http://localhost:${port}`);
+    log.info("Servern lyssnar", { url: `http://localhost:${port}` });
   });
 }
 
 start().catch((err) => {
-  console.error("Kunde inte starta servern:", err);
+  log.error("Kunde inte starta servern", { err });
   process.exit(1);
 });

@@ -5,6 +5,9 @@ import {
   type ResponsesRequest,
   type ResponsesResult,
 } from "./openai-researcher";
+import { createLogger } from "../logging/logger";
+
+const log = createLogger("ai:client");
 
 /**
  * Skapar en riktig OpenAI-baserad researcher från en explicit nyckel.
@@ -20,6 +23,10 @@ export function createResearcherFromKey(
   }
 
   const client = new OpenAI({ apiKey });
+  log.info("OpenAI-klient skapad", {
+    model,
+    keySuffix: apiKey.slice(-4),
+  });
 
   return createOpenAiResearcher({
     model,
