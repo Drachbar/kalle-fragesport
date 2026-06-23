@@ -6,9 +6,10 @@ Wants=network-online.target
 [Container]
 Image=localhost/kalle-backend:latest
 ContainerName=kalle-backend
-Network=kalle.network
 # Frontend-containern når backend via http://backend:3000.
-NetworkAlias=backend
+# NetworkAlias som egen nyckel finns först i podman 5.3; på 4.9 sätts aliaset
+# som option på Network= i stället (samma effekt).
+Network=kalle.network:alias=backend
 # Endast nginx på värden ska nå porten, inte internet.
 PublishPort=127.0.0.1:3000:3000
 # Hemligheter/konfig ligger på servern, utanför git. Se backend.env.example.
