@@ -13,6 +13,8 @@ function makeQuestion(over: Partial<Question> = {}): Question {
     category: 'Geografi',
     type: 'multiple_choice',
     autoUpdate: false,
+    updateIntervalDays: 30,
+    lastCheckedAt: null,
     createdAt: '',
     updatedAt: '',
     ...over,
@@ -69,6 +71,7 @@ describe('QuestionForm (skapa)', () => {
       category: null,
       options: [],
       autoUpdate: false,
+      updateIntervalDays: 30,
     });
     expect(navigate).toHaveBeenCalledWith('/questions');
   });
@@ -91,6 +94,33 @@ describe('QuestionForm (skapa)', () => {
 
     expect(service.create).toHaveBeenCalledWith(
       expect.objectContaining({ autoUpdate: true }),
+    );
+  });
+
+  it('visar och skickar kontrollintervall när tidskänslig är ikryssad', async () => {
+    const service = configure(null);
+    const fixture = TestBed.createComponent(QuestionForm);
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+
+    // Fältet visas inte förrän rutan är ikryssad.
+    expect(el.querySelector('#q-update-interval')).toBeNull();
+
+    setValue(el, '#q-question', 'Vem är statsminister?');
+    setValue(el, '#q-answer', 'NN');
+    (el.querySelector('#q-auto-update') as HTMLInputElement).click();
+    await fixture.whenStable();
+
+    expect(el.querySelector('#q-update-interval')).not.toBeNull();
+    setValue(el, '#q-update-interval', '7');
+    (el.querySelector('form') as HTMLFormElement).dispatchEvent(
+      new Event('submit'),
+    );
+    await fixture.whenStable();
+
+    expect(service.create).toHaveBeenCalledWith(
+      expect.objectContaining({ autoUpdate: true, updateIntervalDays: 7 }),
     );
   });
 

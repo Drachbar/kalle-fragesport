@@ -9,12 +9,14 @@ interface QuestionRow {
   category: string | null;
   type: QuestionType;
   auto_update: boolean;
+  update_interval_days: number;
+  last_checked_at: Date | null;
   created_at: Date;
   updated_at: Date;
 }
 
 const SELECT_COLUMNS =
-  "id, question, answer, options, category, type, auto_update, created_at, updated_at";
+  "id, question, answer, options, category, type, auto_update, update_interval_days, last_checked_at, created_at, updated_at";
 
 function mapRow(row: QuestionRow): Question {
   return {
@@ -26,6 +28,8 @@ function mapRow(row: QuestionRow): Question {
     category: row.category,
     type: row.type,
     autoUpdate: row.auto_update,
+    updateIntervalDays: row.update_interval_days,
+    lastCheckedAt: row.last_checked_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -34,10 +38,14 @@ function mapRow(row: QuestionRow): Question {
 export interface QuestionsRepository {
   list(): Promise<Question[]>;
   listAutoUpdate(): Promise<Question[]>;
+  /** Frågor markerade för auto-uppdatering vars kontrollintervall har löpt ut. */
+  listDueForAutoUpdate(): Promise<Question[]>;
   getById(id: string): Promise<Question | null>;
   random(): Promise<Question | null>;
   create(input: QuestionInput): Promise<Question>;
   update(id: string, input: QuestionInput): Promise<Question | null>;
+  /** Markerar att frågan precis kontrollerats av AI:n (sätter last_checked_at). */
+  markChecked(id: string): Promise<void>;
   remove(id: string): Promise<boolean>;
 }
 
@@ -52,6 +60,19 @@ export const questionsRepository: QuestionsRepository = {
   async listAutoUpdate() {
     const result = await getDatabase().query<QuestionRow>(
       `SELECT ${SELECT_COLUMNS} FROM questions WHERE auto_update = true ORDER BY created_at DESC`,
+    );
+    return result.rows.map(mapRow);
+  },
+
+  async listDueForAutoUpdate() {
+    const result = await getDatabase().query<QuestionRow>(
+      `SELECT ${SELECT_COLUMNS} FROM questions
+       WHERE auto_update = true
+         AND (
+           last_checked_at IS NULL
+           OR last_checked_at + (update_interval_days || ' days')::interval <= now()
+         )
+       ORDER BY created_at DESC`,
     );
     return result.rows.map(mapRow);
   },
@@ -73,26 +94,62 @@ export const questionsRepository: QuestionsRepository = {
     return row ? mapRow(row) : null;
   },
 
-  async create({ question, answer, options, category, type, autoUpdate }) {
+  async create({
+    question,
+    answer,
+    options,
+    category,
+    type,
+    autoUpdate,
+    updateIntervalDays,
+  }) {
     const result = await getDatabase().query<QuestionRow>(
-      `INSERT INTO questions (question, answer, options, category, type, auto_update)
-       VALUES ($1, $2, $3::jsonb, $4, $5, $6)
+      `INSERT INTO questions (question, answer, options, category, type, auto_update, update_interval_days)
+       VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7)
        RETURNING ${SELECT_COLUMNS}`,
-      [question, answer, JSON.stringify(options), category, type, autoUpdate],
+      [
+        question,
+        answer,
+        JSON.stringify(options),
+        category,
+        type,
+        autoUpdate,
+        updateIntervalDays,
+      ],
     );
     return mapRow(result.rows[0]);
   },
 
-  async update(id, { question, answer, options, category, type, autoUpdate }) {
+  async update(
+    id,
+    { question, answer, options, category, type, autoUpdate, updateIntervalDays },
+  ) {
     const result = await getDatabase().query<QuestionRow>(
       `UPDATE questions
-       SET question = $2, answer = $3, options = $4::jsonb, category = $5, type = $6, auto_update = $7
+       SET question = $2, answer = $3, options = $4::jsonb, category = $5, type = $6,
+           auto_update = $7, update_interval_days = $8
        WHERE id = $1
        RETURNING ${SELECT_COLUMNS}`,
-      [id, question, answer, JSON.stringify(options), category, type, autoUpdate],
+      [
+        id,
+        question,
+        answer,
+        JSON.stringify(options),
+        category,
+        type,
+        autoUpdate,
+        updateIntervalDays,
+      ],
     );
     const row = result.rows[0];
     return row ? mapRow(row) : null;
+  },
+
+  async markChecked(id) {
+    await getDatabase().query(
+      `UPDATE questions SET last_checked_at = now() WHERE id = $1`,
+      [id],
+    );
   },
 
   async remove(id) {

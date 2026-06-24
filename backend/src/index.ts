@@ -9,6 +9,12 @@ import { createAutoUpdateRouter } from "./ai/auto-update.routes";
 import { createSettingsRouter } from "./settings/settings.routes";
 import { createContactRouter } from "./contact/contact.routes";
 import { createJobStatusSocket } from "./ai/job-status.socket";
+import { createAutoUpdateScheduler } from "./ai/auto-update.scheduler";
+import { createResearcherFromKey } from "./ai/openai-client";
+import { questionsRepository } from "./questions/questions.repository";
+import { jobsRepository } from "./questions/jobs.repository";
+import { suggestionsRepository } from "./questions/suggestions.repository";
+import { getDatabase } from "./db";
 import { loadBackendEnv } from "./load-env";
 import { createLogger } from "./logging/logger";
 import { createRequestLogger } from "./logging/request-logger";
@@ -74,6 +80,19 @@ async function start(): Promise<void> {
   httpServer.listen(port, () => {
     log.info("Servern lyssnar", { url: `http://localhost:${port}` });
   });
+
+  // Schemalagd auto-uppdatering – av som standard, slås på med en miljövariabel.
+  if (process.env.AUTO_UPDATE_SCHEDULE_ENABLED === "true") {
+    log.info("Aktiverar schemalagd auto-uppdatering");
+    const scheduler = createAutoUpdateScheduler({
+      db: getDatabase(),
+      questionsRepo: questionsRepository,
+      suggestionsRepo: suggestionsRepository,
+      jobsRepo: jobsRepository,
+      createResearcher: (apiKey) => createResearcherFromKey(apiKey),
+    });
+    scheduler.start();
+  }
 }
 
 start().catch((err) => {

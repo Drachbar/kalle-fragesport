@@ -16,6 +16,8 @@ function makeQuestion(over: Partial<Question> = {}): Question {
     category: "Sport",
     type: "free_text",
     autoUpdate: true,
+    updateIntervalDays: 30,
+    lastCheckedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...over,
@@ -43,6 +45,18 @@ describe("buildResearchRequest", () => {
     expect(text).toContain("7");
     expect(text).toContain("8");
   });
+
+  it("skriver in dagens datum i prompten", () => {
+    const req = buildResearchRequest(
+      makeQuestion(),
+      "gpt-5",
+      new Date("2026-02-15T12:00:00Z"),
+    );
+    const text = JSON.stringify(req.input);
+
+    expect(text).toContain("Dagens datum: 2026-02-15");
+    expect(text).toContain("suggestedIntervalDays");
+  });
 });
 
 describe("parseResearchResult", () => {
@@ -55,6 +69,7 @@ describe("parseResearchResult", () => {
         confidence: 0.9,
         sources: ["https://example.com"],
         reasoning: "Spelaren gjorde ett mål till.",
+        suggestedIntervalDays: 14,
       }),
     );
 
@@ -63,6 +78,7 @@ describe("parseResearchResult", () => {
     expect(result.suggestedOptions).toEqual(["7", "8", "9"]);
     expect(result.confidence).toBe(0.9);
     expect(result.sources).toEqual(["https://example.com"]);
+    expect(result.suggestedIntervalDays).toBe(14);
   });
 
   it("kastar fel vid ogiltig JSON", () => {
@@ -84,6 +100,7 @@ describe("createOpenAiResearcher", () => {
         confidence: 0.8,
         sources: [],
         reasoning: "Oförändrat.",
+        suggestedIntervalDays: 90,
       }),
     });
 
@@ -104,6 +121,7 @@ describe("createOpenAiResearcher", () => {
         confidence: 0.9,
         sources: ["https://example.com"],
         reasoning: "Uppdaterat.",
+        suggestedIntervalDays: 7,
       }),
     });
     const researcher = createOpenAiResearcher({ create, model: "gpt-5" });

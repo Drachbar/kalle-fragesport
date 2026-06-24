@@ -19,6 +19,8 @@ function makeQuestion(over: Partial<Question> = {}): Question {
     category: 'Geografi',
     type: 'multiple_choice',
     autoUpdate: false,
+    updateIntervalDays: 30,
+    lastCheckedAt: null,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     ...over,
@@ -32,6 +34,7 @@ const input: QuestionInput = {
   category: null,
   type: 'multiple_choice',
   autoUpdate: false,
+  updateIntervalDays: 30,
 };
 
 describe('QuestionsService', () => {

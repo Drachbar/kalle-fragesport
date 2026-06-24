@@ -25,7 +25,10 @@ async function resolveSingleQuestion(
 
 /** Beroenden för ett auto-uppdateringsjobb (injiceras för testbarhet). */
 export interface AutoUpdateDeps {
-  questionsRepo: Pick<QuestionsRepository, "listAutoUpdate" | "getById">;
+  questionsRepo: Pick<
+    QuestionsRepository,
+    "listAutoUpdate" | "listDueForAutoUpdate" | "getById" | "markChecked"
+  >;
   suggestionsRepo: Pick<SuggestionsRepository, "create">;
   jobsRepo: Pick<JobsRepository, "update">;
   researcher: AnswerResearcher;
@@ -34,6 +37,11 @@ export interface AutoUpdateDeps {
    * Annars körs alla frågor som är markerade för auto-uppdatering.
    */
   questionId?: string;
+  /**
+   * Om true (och inget questionId): kör bara frågor vars kontrollintervall
+   * löpt ut. Används av den schemalagda körningen för att hålla kostnaden nere.
+   */
+  onlyDue?: boolean;
 }
 
 /**
@@ -47,22 +55,31 @@ export async function runAutoUpdateJob(
   jobId: string,
   deps: AutoUpdateDeps,
 ): Promise<void> {
-  const { questionsRepo, suggestionsRepo, jobsRepo, researcher, questionId } =
-    deps;
+  const {
+    questionsRepo,
+    suggestionsRepo,
+    jobsRepo,
+    researcher,
+    questionId,
+    onlyDue,
+  } = deps;
   const log = baseLog.child(jobId);
   const startedAt = Date.now();
 
   log.info("Startar auto-uppdateringsjobb", {
     jobId,
-    mode: questionId ? "single" : "all",
+    mode: questionId ? "single" : onlyDue ? "due" : "all",
     questionId,
   });
 
   try {
-    // En specifik fråga (vald av admin) eller alla auto-uppdaterade frågor.
+    // En specifik fråga (vald av admin), bara förfallna frågor (schemalagt)
+    // eller alla auto-uppdaterade frågor.
     const questions = questionId
       ? await resolveSingleQuestion(questionsRepo, questionId)
-      : await questionsRepo.listAutoUpdate();
+      : onlyDue
+        ? await questionsRepo.listDueForAutoUpdate()
+        : await questionsRepo.listAutoUpdate();
     log.info("Frågor att bearbeta upplösta", { total: questions.length });
     await jobsRepo.update(jobId, { status: "running", total: questions.length });
 
@@ -81,6 +98,9 @@ export async function runAutoUpdateJob(
       });
       try {
         const result = await researcher.research(question);
+        // Markera som kontrollerad direkt så att en förfallen fråga inte tas
+        // om igen nästa schemakörning, oavsett om svaret ändrades.
+        await questionsRepo.markChecked(question.id);
         log.debug("AI-svar mottaget", {
           questionId: question.id,
           changed: result.changed,
@@ -111,6 +131,7 @@ export async function runAutoUpdateJob(
             sources: result.sources,
             reasoning: result.reasoning,
             confidence: result.confidence,
+            suggestedIntervalDays: result.suggestedIntervalDays,
           });
           suggestionsCreated += 1;
           log.info("Förslag skapat", {

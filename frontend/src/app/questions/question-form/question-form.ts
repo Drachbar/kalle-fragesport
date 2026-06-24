@@ -49,6 +49,7 @@ export class QuestionForm implements OnInit {
     ),
     category: [''],
     autoUpdate: [false],
+    updateIntervalDays: [30, [Validators.required, Validators.min(1)]],
     options: new FormArray<FormControl<string>>([]),
   });
 
@@ -69,6 +70,7 @@ export class QuestionForm implements OnInit {
         type: question.type,
         category: question.category ?? '',
         autoUpdate: question.autoUpdate,
+        updateIntervalDays: question.updateIntervalDays,
       });
       this.options.clear();
       for (const option of question.options) {
@@ -111,6 +113,7 @@ export class QuestionForm implements OnInit {
       type: raw.type,
       category: category.length > 0 ? category : null,
       autoUpdate: raw.autoUpdate,
+      updateIntervalDays: raw.updateIntervalDays,
       options: raw.options
         .map((option) => option.trim())
         .filter((option) => option.length > 0),

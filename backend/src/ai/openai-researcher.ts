@@ -42,6 +42,7 @@ const RESEARCH_SCHEMA: Record<string, unknown> = {
     "confidence",
     "sources",
     "reasoning",
+    "suggestedIntervalDays",
   ],
   properties: {
     changed: {
@@ -71,6 +72,12 @@ const RESEARCH_SCHEMA: Record<string, unknown> = {
       type: "string",
       description: "Kort motivering på svenska.",
     },
+    suggestedIntervalDays: {
+      type: "integer",
+      description:
+        "Antal dagar tills frågan bör kontrolleras igen, givet hur snabbt " +
+        "svaret kan ändras och när nästa förändring väntas (minst 1).",
+    },
   },
 };
 
@@ -81,24 +88,38 @@ const resultSchema = z.object({
   confidence: z.number(),
   sources: z.array(z.string()),
   reasoning: z.string(),
+  suggestedIntervalDays: z.number().int().min(1),
 });
+
+/** Formaterar ett datum som YYYY-MM-DD (UTC) för prompten. */
+function formatDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
 
 /** Bygger anropet till Responses API för en given fråga. */
 export function buildResearchRequest(
   question: Question,
   model: string,
+  now: Date = new Date(),
 ): ResponsesRequest {
   const prompt = [
     "Du faktagranskar svar i en frågesport. Sök upp det mest aktuella, korrekta svaret.",
+    `Dagens datum: ${formatDate(now)}`,
     `Fråga: ${question.question}`,
     `Nuvarande lagrade svar: ${question.answer}`,
     `Frågetyp: ${question.type}`,
     `Nuvarande svarsalternativ: ${JSON.stringify(question.options)}`,
+    `Nuvarande kontrollintervall (dagar): ${question.updateIntervalDays}`,
     'Sätt "changed" till true om svaret eller flervalsalternativen behöver ändras.',
     "För multiple_choice: returnera en komplett lista med rimliga alternativ där suggestedAnswer ingår.",
     "För free_text: returnera suggestedOptions som en tom lista.",
     'För true_false: behåll alternativen ["Sant", "Falskt"].',
     "Svara kort och faktiskt, på samma format som det nuvarande svaret.",
+    'Sätt "suggestedIntervalDays" till hur många dagar det bör dröja innan frågan ' +
+      "kontrolleras igen. Utgå från dagens datum och bedöm hur snabbt svaret kan " +
+      "ändras: slå upp när nästa förändring väntas (t.ex. ett val, en turnering, " +
+      "ett bokslut) och välj ett intervall som vaknar lagom inför det. Stabila " +
+      "fakta kan ha ett långt intervall, snabbrörliga ett kort.",
   ].join("\n");
 
   return {
@@ -126,10 +147,16 @@ export function parseResearchResult(outputText: string): ResearchResult {
 export function createOpenAiResearcher(opts: {
   create: ResponsesCreate;
   model: string;
+  /** Injicerbar klocka så att prompten blir deterministisk i test. */
+  now?: () => Date;
 }): AnswerResearcher {
   return {
     async research(question) {
-      const request = buildResearchRequest(question, opts.model);
+      const request = buildResearchRequest(
+        question,
+        opts.model,
+        opts.now?.() ?? new Date(),
+      );
       log.debug("Skickar förfrågan till OpenAI", {
         questionId: question.id,
         model: opts.model,

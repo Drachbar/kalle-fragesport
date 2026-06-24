@@ -42,6 +42,29 @@ export class PgDatabase implements Database {
     }
   }
 
+  async tryRunExclusive<T>(
+    lockKey: number,
+    fn: () => Promise<T>,
+  ): Promise<T | null> {
+    const client = await this.pool.connect();
+    try {
+      const res = await client.query<{ locked: boolean }>(
+        "SELECT pg_try_advisory_lock($1) AS locked",
+        [lockKey],
+      );
+      if (!res.rows[0]?.locked) {
+        return null;
+      }
+      try {
+        return await fn();
+      } finally {
+        await client.query("SELECT pg_advisory_unlock($1)", [lockKey]);
+      }
+    } finally {
+      client.release();
+    }
+  }
+
   async close(): Promise<void> {
     await this.pool.end();
   }

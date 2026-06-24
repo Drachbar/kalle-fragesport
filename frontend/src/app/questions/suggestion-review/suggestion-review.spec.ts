@@ -21,6 +21,7 @@ function suggestion(): PendingSuggestion {
     sources: ['https://example.com/statistik'],
     reasoning: 'Den senaste matchen ökade totalen.',
     confidence: 0.92,
+    suggestedIntervalDays: 14,
     status: 'pending',
     createdAt: '2026-06-22T00:00:00.000Z',
   };

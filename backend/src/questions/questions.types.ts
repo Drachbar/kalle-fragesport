@@ -8,6 +8,10 @@ export interface Question {
   category: string | null;
   type: QuestionType;
   autoUpdate: boolean;
+  /** Hur ofta (dagar) frågan bör kontrolleras av AI:n. */
+  updateIntervalDays: number;
+  /** När AI:n senast kontrollerade frågan; null om aldrig. */
+  lastCheckedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -19,4 +23,5 @@ export interface QuestionInput {
   category: string | null;
   type: QuestionType;
   autoUpdate: boolean;
+  updateIntervalDays: number;
 }

@@ -12,6 +12,8 @@ function makeQuestion(over: Partial<Question> = {}): Question {
     category: "Sport",
     type: "free_text",
     autoUpdate: true,
+    updateIntervalDays: 30,
+    lastCheckedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...over,
@@ -26,6 +28,7 @@ function makeResult(over: Partial<ResearchResult> = {}): ResearchResult {
     confidence: 0.9,
     sources: ["https://example.com"],
     reasoning: "Ett mål till.",
+    suggestedIntervalDays: 14,
     ...over,
   };
 }
@@ -34,17 +37,23 @@ function makeDeps(over: {
   questions?: Question[];
   research?: (q: Question) => Promise<ResearchResult>;
   questionId?: string;
+  onlyDue?: boolean;
 } = {}): AutoUpdateDeps {
   return {
     questionsRepo: {
       listAutoUpdate: vi
         .fn()
         .mockResolvedValue(over.questions ?? [makeQuestion()]),
+      listDueForAutoUpdate: vi
+        .fn()
+        .mockResolvedValue(over.questions ?? [makeQuestion()]),
       getById: vi
         .fn()
         .mockResolvedValue(over.questions?.[0] ?? makeQuestion()),
+      markChecked: vi.fn().mockResolvedValue(undefined),
     },
     questionId: over.questionId,
+    onlyDue: over.onlyDue,
     suggestionsRepo: {
       create: vi.fn().mockResolvedValue(undefined),
     },
@@ -88,8 +97,32 @@ describe("runAutoUpdateJob", () => {
         previousOptions: [],
         suggestedOptions: [],
         sources: ["https://example.com"],
+        suggestedIntervalDays: 14,
       }),
     );
+  });
+
+  it("markerar varje granskad fråga som kontrollerad", async () => {
+    const deps = makeDeps({
+      questions: [makeQuestion({ id: "q-1" }), makeQuestion({ id: "q-2" })],
+      research: vi
+        .fn()
+        .mockResolvedValue(makeResult({ changed: false, suggestedAnswer: "7" })),
+    });
+
+    await runAutoUpdateJob("job-1", deps);
+
+    expect(deps.questionsRepo.markChecked).toHaveBeenCalledWith("q-1");
+    expect(deps.questionsRepo.markChecked).toHaveBeenCalledWith("q-2");
+  });
+
+  it("kör bara förfallna frågor när onlyDue är satt", async () => {
+    const deps = makeDeps({ onlyDue: true, questions: [makeQuestion()] });
+
+    await runAutoUpdateJob("job-1", deps);
+
+    expect(deps.questionsRepo.listDueForAutoUpdate).toHaveBeenCalled();
+    expect(deps.questionsRepo.listAutoUpdate).not.toHaveBeenCalled();
   });
 
   it("skapar förslag när bara flervalsalternativen har ändrats", async () => {

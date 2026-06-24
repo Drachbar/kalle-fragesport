@@ -12,6 +12,8 @@ export interface Question {
   category: string | null;
   type: QuestionType;
   autoUpdate: boolean;
+  updateIntervalDays: number;
+  lastCheckedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -23,6 +25,7 @@ export interface QuestionInput {
   category: string | null;
   type: QuestionType;
   autoUpdate: boolean;
+  updateIntervalDays: number;
 }
 
 export type JobStatus = 'pending' | 'running' | 'completed' | 'failed';
@@ -47,6 +50,7 @@ export interface PendingSuggestion {
   sources: string[];
   reasoning: string | null;
   confidence: number | null;
+  suggestedIntervalDays: number | null;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
 }

@@ -53,6 +53,23 @@
     </label>
   </div>
 
+  @if (form.controls.autoUpdate.value) {
+    <div class="field">
+      <label for="q-update-interval">Kontrollera svaret var N:e dag</label>
+      <input
+        id="q-update-interval"
+        type="number"
+        min="1"
+        formControlName="updateIntervalDays"
+        aria-describedby="q-update-interval-hint"
+      />
+      <p id="q-update-interval-hint" class="field-hint">
+        Hur ofta AI:n ska kontrollera svaret. AI:n kan föreslå ett nytt intervall
+        utifrån hur snabbt svaret kan ändras.
+      </p>
+    </div>
+  }
+
   <fieldset class="field options" formArrayName="options">
     <legend>Svarsalternativ</legend>
     @for (ctrl of options.controls; track $index) {

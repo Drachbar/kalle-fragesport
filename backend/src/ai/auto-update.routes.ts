@@ -26,7 +26,7 @@ const log = createLogger("ai:auto-update");
 export interface AutoUpdateRouterDeps {
   questionsRepo: Pick<
     QuestionsRepository,
-    "getById" | "update" | "listAutoUpdate"
+    "getById" | "update" | "listAutoUpdate" | "listDueForAutoUpdate" | "markChecked"
   >;
   jobsRepo: Pick<
     JobsRepository,
@@ -197,6 +197,9 @@ export function createAutoUpdateRouter(
       category: question.category,
       type: question.type,
       autoUpdate: question.autoUpdate,
+      // Applicera AI:ns rekommenderade intervall om ett föreslogs.
+      updateIntervalDays:
+        suggestion.suggestedIntervalDays ?? question.updateIntervalDays,
     };
     await questionsRepo.update(question.id, input);
     await suggestionsRepo.setStatus(id, "approved");

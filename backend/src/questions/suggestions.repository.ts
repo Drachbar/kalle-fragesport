@@ -13,6 +13,8 @@ export interface AnswerSuggestion {
   sources: string[];
   reasoning: string | null;
   confidence: number | null;
+  /** AI:ns rekommenderade kontrollintervall (dagar); null om inget föreslogs. */
+  suggestedIntervalDays: number | null;
   status: SuggestionStatus;
   createdAt: Date;
 }
@@ -32,6 +34,7 @@ export interface SuggestionInput {
   sources: string[];
   reasoning: string | null;
   confidence: number | null;
+  suggestedIntervalDays: number | null;
 }
 
 interface SuggestionRow {
@@ -45,12 +48,13 @@ interface SuggestionRow {
   sources: string[];
   reasoning: string | null;
   confidence: number | null;
+  suggested_interval_days: number | null;
   status: SuggestionStatus;
   created_at: Date;
 }
 
 const SELECT_COLUMNS =
-  "id, question_id, job_id, previous_answer, suggested_answer, previous_options, suggested_options, sources, reasoning, confidence, status, created_at";
+  "id, question_id, job_id, previous_answer, suggested_answer, previous_options, suggested_options, sources, reasoning, confidence, suggested_interval_days, status, created_at";
 
 function mapRow(row: SuggestionRow): AnswerSuggestion {
   return {
@@ -65,6 +69,7 @@ function mapRow(row: SuggestionRow): AnswerSuggestion {
     sources: row.sources,
     reasoning: row.reasoning,
     confidence: row.confidence,
+    suggestedIntervalDays: row.suggested_interval_days,
     status: row.status,
     createdAt: row.created_at,
   };
@@ -91,12 +96,14 @@ export const suggestionsRepository: SuggestionsRepository = {
     sources,
     reasoning,
     confidence,
+    suggestedIntervalDays,
   }) {
     const result = await getDatabase().query<SuggestionRow>(
       `INSERT INTO answer_suggestions
          (question_id, job_id, previous_answer, suggested_answer,
-          previous_options, suggested_options, sources, reasoning, confidence)
-       VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8, $9)
+          previous_options, suggested_options, sources, reasoning, confidence,
+          suggested_interval_days)
+       VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8, $9, $10)
        RETURNING ${SELECT_COLUMNS}`,
       [
         questionId,
@@ -108,6 +115,7 @@ export const suggestionsRepository: SuggestionsRepository = {
         JSON.stringify(sources),
         reasoning,
         confidence,
+        suggestedIntervalDays,
       ],
     );
     return mapRow(result.rows[0]);
@@ -117,7 +125,8 @@ export const suggestionsRepository: SuggestionsRepository = {
     const result = await getDatabase().query<SuggestionRow & { question: string }>(
       `SELECT s.id, s.question_id, s.job_id, s.previous_answer, s.suggested_answer,
               s.previous_options, s.suggested_options, s.sources,
-              s.reasoning, s.confidence, s.status, s.created_at,
+              s.reasoning, s.confidence, s.suggested_interval_days,
+              s.status, s.created_at,
               q.question
        FROM answer_suggestions s
        JOIN questions q ON q.id = s.question_id

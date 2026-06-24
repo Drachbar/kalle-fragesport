@@ -14,6 +14,11 @@ export interface ResearchResult {
   sources: string[];
   /** Kort motivering till bedömningen. */
   reasoning: string;
+  /**
+   * Hur ofta (dagar) frågan bör kontrolleras härnäst, givet hur snabbt svaret
+   * kan ändras och när nästa förändring väntas.
+   */
+  suggestedIntervalDays: number;
 }
 
 /**

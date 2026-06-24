@@ -20,5 +20,12 @@ export interface Database {
    */
   runExclusive<T>(fn: () => Promise<T>): Promise<T>;
 
+  /**
+   * Försöker ta ett advisory lock för `lockKey` utan att blockera. Lyckas det
+   * körs fn (med låset hållet) och resultatet returneras. Tas låset inte
+   * (en annan instans håller det) returneras null och fn körs inte.
+   */
+  tryRunExclusive<T>(lockKey: number, fn: () => Promise<T>): Promise<T | null>;
+
   close(): Promise<void>;
 }

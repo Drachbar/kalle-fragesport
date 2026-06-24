@@ -15,6 +15,8 @@ function makeQuestion(over: Partial<Question> = {}): Question {
     category: "Geografi",
     type: "multiple_choice",
     autoUpdate: false,
+    updateIntervalDays: 30,
+    lastCheckedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...over,
@@ -25,10 +27,12 @@ function fakeRepo(over: Partial<QuestionsRepository> = {}): QuestionsRepository 
   return {
     list: vi.fn().mockResolvedValue([makeQuestion()]),
     listAutoUpdate: vi.fn().mockResolvedValue([makeQuestion()]),
+    listDueForAutoUpdate: vi.fn().mockResolvedValue([makeQuestion()]),
     getById: vi.fn().mockResolvedValue(makeQuestion()),
     random: vi.fn().mockResolvedValue(makeQuestion()),
     create: vi.fn().mockResolvedValue(makeQuestion()),
     update: vi.fn().mockResolvedValue(makeQuestion()),
+    markChecked: vi.fn().mockResolvedValue(undefined),
     remove: vi.fn().mockResolvedValue(true),
     ...over,
   };

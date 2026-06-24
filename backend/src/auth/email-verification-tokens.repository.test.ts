@@ -25,6 +25,10 @@ class FakeDatabase implements Database {
     return fn();
   }
 
+  async tryRunExclusive<T>(_lockKey: number, fn: () => Promise<T>): Promise<T | null> {
+    return fn();
+  }
+
   async close(): Promise<void> {
     return undefined;
   }

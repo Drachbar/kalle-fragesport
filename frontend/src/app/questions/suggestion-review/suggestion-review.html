@@ -54,6 +54,11 @@
         @if (confidencePercent(suggestion.confidence); as confidence) {
           <p class="meta">Säkerhet: {{ confidence }} %</p>
         }
+        @if (suggestion.suggestedIntervalDays) {
+          <p class="meta">
+            Föreslaget kontrollintervall: var {{ suggestion.suggestedIntervalDays }}:e dag
+          </p>
+        }
         @if (suggestion.sources.length > 0) {
           <p class="sources">
             Källor:

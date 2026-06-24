@@ -16,6 +16,8 @@ function makeQuestion(over: Partial<Question> = {}): Question {
     category: "Sport",
     type: "free_text",
     autoUpdate: true,
+    updateIntervalDays: 30,
+    lastCheckedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...over,
@@ -48,6 +50,7 @@ function makeSuggestion(over: Partial<AnswerSuggestion> = {}): AnswerSuggestion 
     sources: ["https://example.com"],
     reasoning: "Ett mål till.",
     confidence: 0.9,
+    suggestedIntervalDays: 14,
     status: "pending",
     createdAt: new Date(),
     ...over,
@@ -58,8 +61,10 @@ function makeDeps(over: Partial<AutoUpdateRouterDeps> = {}): AutoUpdateRouterDep
   return {
     questionsRepo: {
       listAutoUpdate: vi.fn().mockResolvedValue([]),
+      listDueForAutoUpdate: vi.fn().mockResolvedValue([]),
       getById: vi.fn().mockResolvedValue(makeQuestion()),
       update: vi.fn().mockResolvedValue(makeQuestion()),
+      markChecked: vi.fn().mockResolvedValue(undefined),
     },
     jobsRepo: {
       create: vi.fn().mockResolvedValue(makeJob({ status: "pending" })),
@@ -243,9 +248,36 @@ describe("POST /questions/suggestions/:id/approve (admin)", () => {
       expect.objectContaining({
         answer: "8",
         options: ["8", "7", "6"],
+        updateIntervalDays: 14,
       }),
     );
     expect(deps.suggestionsRepo.setStatus).toHaveBeenCalledWith("s-1", "approved");
+  });
+
+  it("behåller frågans intervall om förslaget saknar rekommendation", async () => {
+    const deps = makeDeps({
+      questionsRepo: {
+        listAutoUpdate: vi.fn().mockResolvedValue([]),
+        listDueForAutoUpdate: vi.fn().mockResolvedValue([]),
+        getById: vi.fn().mockResolvedValue(makeQuestion({ updateIntervalDays: 60 })),
+        update: vi.fn().mockResolvedValue(makeQuestion()),
+        markChecked: vi.fn().mockResolvedValue(undefined),
+      },
+      suggestionsRepo: {
+        create: vi.fn(),
+        listPending: vi.fn(),
+        getById: vi.fn().mockResolvedValue(makeSuggestion({ suggestedIntervalDays: null })),
+        setStatus: vi.fn().mockResolvedValue(makeSuggestion({ status: "approved" })),
+      },
+    });
+    await request(makeApp(deps, adminSession)).post(
+      "/questions/suggestions/s-1/approve",
+    );
+
+    expect(deps.questionsRepo.update).toHaveBeenCalledWith(
+      "q-1",
+      expect.objectContaining({ updateIntervalDays: 60 }),
+    );
   });
 
   it("svarar 404 om förslaget saknas", async () => {

@@ -52,6 +52,27 @@ describe("createQuestionSchema", () => {
     }
   });
 
+  it("sätter updateIntervalDays till 30 som standard", () => {
+    const result = createQuestionSchema.safeParse({
+      question: "Fråga?",
+      answer: "Svar",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.updateIntervalDays).toBe(30);
+    }
+  });
+
+  it("avvisar updateIntervalDays under 1", () => {
+    const result = createQuestionSchema.safeParse({
+      question: "Fråga?",
+      answer: "Svar",
+      updateIntervalDays: 0,
+    });
+    expect(result.success).toBe(false);
+  });
+
   it("avvisar tom fråga", () => {
     const result = createQuestionSchema.safeParse({
       question: "",
