@@ -14,8 +14,9 @@ export function createQuestionsRouter(
 ): Router {
   const router = Router();
 
-  // Publik läsning.
-  router.get("/", async (_req, res) => {
+  // Hela listan (alla frågor) kräver admin. Vanliga besökare slumpar fram
+  // frågor via "/random" och kan öppna en enskild fråga via "/:id".
+  router.get("/", requireAdmin, async (_req, res) => {
     res.json(await repo.list());
   });
 

@@ -2,7 +2,9 @@
   <nav class="app-nav" aria-label="Huvudmeny">
     <div class="nav-left">
       <a class="brand" routerLink="/">Kalle Frågesport</a>
-      <a routerLink="/questions">Frågor</a>
+      @if (auth.isAdmin()) {
+        <a routerLink="/questions">Frågor</a>
+      }
     </div>
     <div class="nav-actions">
       @if (auth.isLoggedIn()) {

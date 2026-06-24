@@ -21,6 +21,7 @@ export const routes: Routes = [
   },
   {
     path: 'questions',
+    canActivate: [adminGuard],
     loadComponent: () =>
       import('./questions/question-list/question-list').then(
         (m) => m.QuestionList,

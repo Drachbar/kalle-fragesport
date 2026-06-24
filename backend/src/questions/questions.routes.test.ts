@@ -53,13 +53,39 @@ const adminSession = { userId: "id-1", role: "admin" as Role };
 const userSession = { userId: "id-2", role: "user" as Role };
 const validBody = { question: "Fråga?", answer: "Svar", options: ["a", "b"] };
 
-describe("GET /questions (publikt)", () => {
-  it("returnerar listan utan inloggning", async () => {
-    const app = makeApp(fakeRepo());
+describe("GET /questions (admin)", () => {
+  it("returnerar listan som admin", async () => {
+    const app = makeApp(fakeRepo(), adminSession);
     const res = await request(app).get("/questions");
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
+  });
+
+  it("svarar 401 för oinloggad", async () => {
+    const repo = fakeRepo();
+    const res = await request(makeApp(repo)).get("/questions");
+
+    expect(res.status).toBe(401);
+    expect(repo.list).not.toHaveBeenCalled();
+  });
+
+  it("svarar 403 för inloggad icke-admin", async () => {
+    const repo = fakeRepo();
+    const res = await request(makeApp(repo, userSession)).get("/questions");
+
+    expect(res.status).toBe(403);
+    expect(repo.list).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /questions/:id (publikt)", () => {
+  it("returnerar en fråga utan inloggning", async () => {
+    const app = makeApp(fakeRepo());
+    const res = await request(app).get("/questions/q-1");
+
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe("q-1");
   });
 
   it("svarar 404 för okänt id", async () => {
