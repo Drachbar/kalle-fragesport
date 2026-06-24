@@ -12,6 +12,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { QuestionsService, type Question } from '../questions/questions.service';
 import { SeoService } from '../shared/seo.service';
+import { Adsense } from '../shared/adsense/adsense';
 
 /** Transfer-state-nyckel för en specifik fråga (delas server↔klient). */
 const questionKey = (id: string) => makeStateKey<Question>('question:' + id);
@@ -22,6 +23,7 @@ const RANDOM_ID_KEY = makeStateKey<string>('home:randomId');
 @Component({
   selector: 'app-home',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [Adsense],
   templateUrl: './home.html',
   styleUrl: './home.css',
 })
@@ -32,6 +34,9 @@ export class Home {
   private readonly transferState = inject(TransferState);
   private readonly seo = inject(SeoService);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
+
+  /** AdSense-slot-id för annonsen ovanför quiz-kortet. TODO: ersätt platshållaren. */
+  protected readonly adSlot = '0000000000';
 
   protected readonly current = signal<Question | null>(null);
   protected readonly showAnswer = signal(false);

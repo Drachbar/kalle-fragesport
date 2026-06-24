@@ -4,6 +4,8 @@
   <p class="hero-sub">En slumpad fråga i taget — testa dina kunskaper.</p>
 </section>
 
+<app-adsense [slot]="adSlot" />
+
 @if (error()) {
   <p role="alert" class="error">{{ error() }}</p>
 } @else if (loading()) {
