@@ -1,5 +1,12 @@
 import type { Question } from "../questions/questions.types";
 
+/** En källa som stöder ett föreslaget svar, med publiceringsdatum om känt. */
+export interface ResearchSource {
+  url: string;
+  /** Publiceringsdatum (ISO) om det går att fastställa, annars null. */
+  publishedAt: string | null;
+}
+
 /** Resultatet av att slå upp ett aktuellt svar på en fråga. */
 export interface ResearchResult {
   /** Bedömer AI:n att det nuvarande svaret behöver ändras? */
@@ -10,8 +17,8 @@ export interface ResearchResult {
   suggestedOptions: string[];
   /** AI:ns säkerhet, 0–1. */
   confidence: number;
-  /** Käll-URL:er från webbsökningen som stöder svaret. */
-  sources: string[];
+  /** Källor från webbsökningen som stöder svaret, med datum om känt. */
+  sources: ResearchSource[];
   /** Kort motivering till bedömningen. */
   reasoning: string;
   /**
@@ -19,6 +26,10 @@ export interface ResearchResult {
    * kan ändras och när nästa förändring väntas.
    */
   suggestedIntervalDays: number;
+  /** Datum (ISO) som det föreslagna svaret gäller per; null om ej daterbart. */
+  answerAsOf: string | null;
+  /** Tidigast datum (ISO) då svaret kan ändras härnäst; null om okänt. */
+  suggestedEarliestUpdateAt: string | null;
 }
 
 /**

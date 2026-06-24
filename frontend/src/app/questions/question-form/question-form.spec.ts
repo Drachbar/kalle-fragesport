@@ -15,6 +15,8 @@ function makeQuestion(over: Partial<Question> = {}): Question {
     autoUpdate: false,
     updateIntervalDays: 30,
     lastCheckedAt: null,
+    earliestUpdateAt: null,
+    answerAsOf: null,
     createdAt: '',
     updatedAt: '',
     ...over,
@@ -72,6 +74,8 @@ describe('QuestionForm (skapa)', () => {
       options: [],
       autoUpdate: false,
       updateIntervalDays: 30,
+      earliestUpdateAt: null,
+      answerAsOf: null,
     });
     expect(navigate).toHaveBeenCalledWith('/questions');
   });
@@ -121,6 +125,26 @@ describe('QuestionForm (skapa)', () => {
 
     expect(service.create).toHaveBeenCalledWith(
       expect.objectContaining({ autoUpdate: true, updateIntervalDays: 7 }),
+    );
+  });
+
+  it('skickar answerAsOf som ifyllt datum', async () => {
+    const service = configure(null);
+    const fixture = TestBed.createComponent(QuestionForm);
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    vi.spyOn(TestBed.inject(Router), 'navigateByUrl').mockResolvedValue(true);
+
+    setValue(el, '#q-question', 'Vem vann?');
+    setValue(el, '#q-answer', 'Kanada');
+    setValue(el, '#q-answer-as-of', '2026-02-22');
+    (el.querySelector('form') as HTMLFormElement).dispatchEvent(
+      new Event('submit'),
+    );
+    await fixture.whenStable();
+
+    expect(service.create).toHaveBeenCalledWith(
+      expect.objectContaining({ answerAsOf: '2026-02-22' }),
     );
   });
 

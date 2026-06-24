@@ -14,6 +14,8 @@ function makeQuestion(over: Partial<Question> = {}): Question {
     autoUpdate: true,
     updateIntervalDays: 30,
     lastCheckedAt: null,
+    earliestUpdateAt: null,
+    answerAsOf: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...over,
@@ -26,9 +28,11 @@ function makeResult(over: Partial<ResearchResult> = {}): ResearchResult {
     suggestedAnswer: "8",
     suggestedOptions: [],
     confidence: 0.9,
-    sources: ["https://example.com"],
+    sources: [{ url: "https://example.com", publishedAt: "2026-03-01" }],
     reasoning: "Ett mål till.",
     suggestedIntervalDays: 14,
+    answerAsOf: "2026-03-01",
+    suggestedEarliestUpdateAt: null,
     ...over,
   };
 }
@@ -38,6 +42,7 @@ function makeDeps(over: {
   research?: (q: Question) => Promise<ResearchResult>;
   questionId?: string;
   onlyDue?: boolean;
+  mode?: "answer" | "interval";
 } = {}): AutoUpdateDeps {
   return {
     questionsRepo: {
@@ -51,9 +56,11 @@ function makeDeps(over: {
         .fn()
         .mockResolvedValue(over.questions?.[0] ?? makeQuestion()),
       markChecked: vi.fn().mockResolvedValue(undefined),
+      updateTiming: vi.fn().mockResolvedValue(undefined),
     },
     questionId: over.questionId,
     onlyDue: over.onlyDue,
+    mode: over.mode,
     suggestionsRepo: {
       create: vi.fn().mockResolvedValue(undefined),
     },
@@ -96,7 +103,7 @@ describe("runAutoUpdateJob", () => {
         suggestedAnswer: "8",
         previousOptions: [],
         suggestedOptions: [],
-        sources: ["https://example.com"],
+        sources: [{ url: "https://example.com", publishedAt: "2026-03-01" }],
         suggestedIntervalDays: 14,
       }),
     );
@@ -123,6 +130,88 @@ describe("runAutoUpdateJob", () => {
 
     expect(deps.questionsRepo.listDueForAutoUpdate).toHaveBeenCalled();
     expect(deps.questionsRepo.listAutoUpdate).not.toHaveBeenCalled();
+  });
+
+  it("skriver tidsmetadata direkt på frågan (answer-läge)", async () => {
+    const deps = makeDeps({
+      questions: [makeQuestion({ id: "q-1" })],
+      research: vi.fn().mockResolvedValue(
+        makeResult({
+          suggestedIntervalDays: 21,
+          suggestedEarliestUpdateAt: "2026-09-01",
+        }),
+      ),
+    });
+
+    await runAutoUpdateJob("job-1", deps);
+
+    expect(deps.questionsRepo.updateTiming).toHaveBeenCalledWith("q-1", {
+      updateIntervalDays: 21,
+      earliestUpdateAt: "2026-09-01",
+    });
+  });
+
+  it("uppdaterar bara tidsmetadata och skapar inget förslag i intervall-läge", async () => {
+    const deps = makeDeps({
+      mode: "interval",
+      questions: [makeQuestion({ id: "q-1", answer: "7" })],
+      research: vi.fn().mockResolvedValue(
+        makeResult({ suggestedAnswer: "8", suggestedIntervalDays: 21 }),
+      ),
+    });
+
+    await runAutoUpdateJob("job-1", deps);
+
+    expect(deps.questionsRepo.updateTiming).toHaveBeenCalledWith("q-1", {
+      updateIntervalDays: 21,
+      earliestUpdateAt: null,
+    });
+    expect(deps.suggestionsRepo.create).not.toHaveBeenCalled();
+  });
+
+  it("flaggar förslag vars info är äldre än nuvarande svar", async () => {
+    const deps = makeDeps({
+      questions: [
+        makeQuestion({
+          id: "q-1",
+          answer: "Finland",
+          answerAsOf: new Date("2026-02-22T00:00:00Z"),
+        }),
+      ],
+      research: vi.fn().mockResolvedValue(
+        makeResult({
+          suggestedAnswer: "Kanada",
+          answerAsOf: "2022-02-20",
+        }),
+      ),
+    });
+
+    await runAutoUpdateJob("job-1", deps);
+
+    expect(deps.suggestionsRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ olderThanCurrent: true, answerAsOf: "2022-02-20" }),
+    );
+  });
+
+  it("flaggar inte förslag när AI:ns info är nyare", async () => {
+    const deps = makeDeps({
+      questions: [
+        makeQuestion({
+          id: "q-1",
+          answer: "Finland",
+          answerAsOf: new Date("2022-02-20T00:00:00Z"),
+        }),
+      ],
+      research: vi.fn().mockResolvedValue(
+        makeResult({ suggestedAnswer: "Kanada", answerAsOf: "2026-02-22" }),
+      ),
+    });
+
+    await runAutoUpdateJob("job-1", deps);
+
+    expect(deps.suggestionsRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ olderThanCurrent: false }),
+    );
   });
 
   it("skapar förslag när bara flervalsalternativen har ändrats", async () => {

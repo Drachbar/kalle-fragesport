@@ -18,6 +18,8 @@ function makeQuestion(over: Partial<Question> = {}): Question {
     autoUpdate: true,
     updateIntervalDays: 30,
     lastCheckedAt: null,
+    earliestUpdateAt: null,
+    answerAsOf: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...over,
@@ -57,6 +59,19 @@ describe("buildResearchRequest", () => {
     expect(text).toContain("Dagens datum: 2026-02-15");
     expect(text).toContain("suggestedIntervalDays");
   });
+
+  it("härdar prompten mot äldre information och tar med svarets giltighetsdatum", () => {
+    const req = buildResearchRequest(
+      makeQuestion({ answerAsOf: new Date("2026-02-20T00:00:00Z") }),
+      "gpt-5",
+    );
+    const text = JSON.stringify(req.input);
+
+    expect(text).toContain("Nuvarande svar gäller per: 2026-02-20");
+    expect(text).toContain("ALDRIG ett nyare svar med");
+    expect(text).toContain("answerAsOf");
+    expect(text).toContain("suggestedEarliestUpdateAt");
+  });
 });
 
 describe("parseResearchResult", () => {
@@ -67,9 +82,11 @@ describe("parseResearchResult", () => {
         suggestedAnswer: "8",
         suggestedOptions: ["7", "8", "9"],
         confidence: 0.9,
-        sources: ["https://example.com"],
+        sources: [{ url: "https://example.com", publishedAt: "2026-03-01" }],
         reasoning: "Spelaren gjorde ett mål till.",
         suggestedIntervalDays: 14,
+        answerAsOf: "2026-03-01",
+        suggestedEarliestUpdateAt: "2026-06-01",
       }),
     );
 
@@ -77,8 +94,12 @@ describe("parseResearchResult", () => {
     expect(result.suggestedAnswer).toBe("8");
     expect(result.suggestedOptions).toEqual(["7", "8", "9"]);
     expect(result.confidence).toBe(0.9);
-    expect(result.sources).toEqual(["https://example.com"]);
+    expect(result.sources).toEqual([
+      { url: "https://example.com", publishedAt: "2026-03-01" },
+    ]);
     expect(result.suggestedIntervalDays).toBe(14);
+    expect(result.answerAsOf).toBe("2026-03-01");
+    expect(result.suggestedEarliestUpdateAt).toBe("2026-06-01");
   });
 
   it("kastar fel vid ogiltig JSON", () => {
@@ -101,6 +122,8 @@ describe("createOpenAiResearcher", () => {
         sources: [],
         reasoning: "Oförändrat.",
         suggestedIntervalDays: 90,
+        answerAsOf: null,
+        suggestedEarliestUpdateAt: null,
       }),
     });
 
@@ -119,9 +142,11 @@ describe("createOpenAiResearcher", () => {
         suggestedAnswer: "8",
         suggestedOptions: ["6", "7", "9"],
         confidence: 0.9,
-        sources: ["https://example.com"],
+        sources: [{ url: "https://example.com", publishedAt: null }],
         reasoning: "Uppdaterat.",
         suggestedIntervalDays: 7,
+        answerAsOf: null,
+        suggestedEarliestUpdateAt: null,
       }),
     });
     const researcher = createOpenAiResearcher({ create, model: "gpt-5" });

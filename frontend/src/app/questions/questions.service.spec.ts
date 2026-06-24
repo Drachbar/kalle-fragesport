@@ -21,6 +21,8 @@ function makeQuestion(over: Partial<Question> = {}): Question {
     autoUpdate: false,
     updateIntervalDays: 30,
     lastCheckedAt: null,
+    earliestUpdateAt: null,
+    answerAsOf: null,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
     ...over,
@@ -35,6 +37,8 @@ const input: QuestionInput = {
   type: 'multiple_choice',
   autoUpdate: false,
   updateIntervalDays: 30,
+  earliestUpdateAt: null,
+  answerAsOf: null,
 };
 
 describe('QuestionsService', () => {
@@ -121,12 +125,20 @@ describe('QuestionsService', () => {
     expect(jobId).toBe('job-1');
   });
 
-  it('startAutoUpdate skickar med questionId när det anges', () => {
+  it('startAutoUpdate skickar med questionId och mode answer som standard', () => {
     service.startAutoUpdate('q-9').subscribe();
 
     const req = httpMock.expectOne('/api/questions/auto-update');
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ questionId: 'q-9' });
+    expect(req.request.body).toEqual({ questionId: 'q-9', mode: 'answer' });
+    req.flush({ jobId: 'job-1' });
+  });
+
+  it('startAutoUpdate skickar med mode interval', () => {
+    service.startAutoUpdate(undefined, 'interval').subscribe();
+
+    const req = httpMock.expectOne('/api/questions/auto-update');
+    expect(req.request.body).toEqual({ mode: 'interval' });
     req.flush({ jobId: 'job-1' });
   });
 

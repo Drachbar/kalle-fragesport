@@ -30,6 +30,7 @@ function makeDeps(over: Partial<SchedulerDeps> = {}): SchedulerDeps {
       listDueForAutoUpdate: vi.fn().mockResolvedValue([]),
       getById: vi.fn().mockResolvedValue(null),
       markChecked: vi.fn().mockResolvedValue(undefined),
+      updateTiming: vi.fn().mockResolvedValue(undefined),
     },
     suggestionsRepo: { create: vi.fn() },
     jobsRepo: {

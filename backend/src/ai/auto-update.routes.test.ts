@@ -18,6 +18,8 @@ function makeQuestion(over: Partial<Question> = {}): Question {
     autoUpdate: true,
     updateIntervalDays: 30,
     lastCheckedAt: null,
+    earliestUpdateAt: null,
+    answerAsOf: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...over,
@@ -47,10 +49,13 @@ function makeSuggestion(over: Partial<AnswerSuggestion> = {}): AnswerSuggestion 
     suggestedAnswer: "8",
     previousOptions: ["7", "6", "5"],
     suggestedOptions: ["8", "7", "6"],
-    sources: ["https://example.com"],
+    sources: [{ url: "https://example.com", publishedAt: "2026-03-01" }],
     reasoning: "Ett mål till.",
     confidence: 0.9,
     suggestedIntervalDays: 14,
+    suggestedEarliestUpdateAt: "2026-09-01",
+    answerAsOf: "2026-03-01",
+    olderThanCurrent: false,
     status: "pending",
     createdAt: new Date(),
     ...over,
@@ -65,6 +70,7 @@ function makeDeps(over: Partial<AutoUpdateRouterDeps> = {}): AutoUpdateRouterDep
       getById: vi.fn().mockResolvedValue(makeQuestion()),
       update: vi.fn().mockResolvedValue(makeQuestion()),
       markChecked: vi.fn().mockResolvedValue(undefined),
+      updateTiming: vi.fn().mockResolvedValue(undefined),
     },
     jobsRepo: {
       create: vi.fn().mockResolvedValue(makeJob({ status: "pending" })),
@@ -128,6 +134,29 @@ describe("POST /questions/auto-update (admin)", () => {
     expect(deps.runJob).toHaveBeenCalledWith(
       "job-1",
       expect.objectContaining({ questionId: "q-9" }),
+    );
+  });
+
+  it("skickar med mode 'interval' till runJob", async () => {
+    const deps = makeDeps();
+    const res = await request(makeApp(deps, adminSession))
+      .post("/questions/auto-update")
+      .send({ mode: "interval" });
+
+    expect(res.status).toBe(201);
+    expect(deps.runJob).toHaveBeenCalledWith(
+      "job-1",
+      expect.objectContaining({ mode: "interval" }),
+    );
+  });
+
+  it("defaultar till mode 'answer' utan body", async () => {
+    const deps = makeDeps();
+    await request(makeApp(deps, adminSession)).post("/questions/auto-update");
+
+    expect(deps.runJob).toHaveBeenCalledWith(
+      "job-1",
+      expect.objectContaining({ mode: "answer" }),
     );
   });
 
@@ -249,6 +278,8 @@ describe("POST /questions/suggestions/:id/approve (admin)", () => {
         answer: "8",
         options: ["8", "7", "6"],
         updateIntervalDays: 14,
+        earliestUpdateAt: "2026-09-01",
+        answerAsOf: "2026-03-01",
       }),
     );
     expect(deps.suggestionsRepo.setStatus).toHaveBeenCalledWith("s-1", "approved");
@@ -262,6 +293,7 @@ describe("POST /questions/suggestions/:id/approve (admin)", () => {
         getById: vi.fn().mockResolvedValue(makeQuestion({ updateIntervalDays: 60 })),
         update: vi.fn().mockResolvedValue(makeQuestion()),
         markChecked: vi.fn().mockResolvedValue(undefined),
+        updateTiming: vi.fn().mockResolvedValue(undefined),
       },
       suggestionsRepo: {
         create: vi.fn(),

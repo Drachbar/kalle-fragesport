@@ -9,7 +9,7 @@ import {
 import { QuestionsService, type PendingSuggestion } from '../questions.service';
 import { SuggestionReview } from './suggestion-review';
 
-function suggestion(): PendingSuggestion {
+function suggestion(over: Partial<PendingSuggestion> = {}): PendingSuggestion {
   return {
     id: 's-1',
     questionId: 'q-1',
@@ -18,12 +18,18 @@ function suggestion(): PendingSuggestion {
     suggestedAnswer: '8',
     previousOptions: ['7', '6', '5'],
     suggestedOptions: ['8', '7', '6'],
-    sources: ['https://example.com/statistik'],
+    sources: [
+      { url: 'https://example.com/statistik', publishedAt: '2026-03-01' },
+    ],
     reasoning: 'Den senaste matchen ökade totalen.',
     confidence: 0.92,
     suggestedIntervalDays: 14,
+    suggestedEarliestUpdateAt: '2026-09-01',
+    answerAsOf: '2026-03-01',
+    olderThanCurrent: false,
     status: 'pending',
     createdAt: '2026-06-22T00:00:00.000Z',
+    ...over,
   };
 }
 
@@ -79,6 +85,29 @@ describe('SuggestionReview', () => {
     expect(el.querySelector('.sources a')?.getAttribute('href')).toBe(
       'https://example.com/statistik',
     );
+    // Källans publiceringsdatum visas.
+    expect(el.querySelector('.sources a')?.textContent).toContain('2026-03-01');
+  });
+
+  it('flaggar förslag vars källa är äldre än nuvarande svar', async () => {
+    const { http } = configure();
+    const fixture = await setup(http, [
+      suggestion({ olderThanCurrent: true }),
+    ]);
+
+    const el = fixture.nativeElement as HTMLElement;
+    const warning = el.querySelector('.warning');
+    expect(warning).not.toBeNull();
+    expect(warning?.textContent).toContain('äldre än nuvarande svar');
+  });
+
+  it('visar ingen varning när källan inte är äldre', async () => {
+    const { http } = configure();
+    const fixture = await setup(http, [suggestion()]);
+
+    expect(
+      (fixture.nativeElement as HTMLElement).querySelector('.warning'),
+    ).toBeNull();
   });
 
   it('visar felmeddelande när hämtningen misslyckas', async () => {

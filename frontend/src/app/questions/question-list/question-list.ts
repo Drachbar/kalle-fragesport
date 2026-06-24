@@ -15,6 +15,7 @@ import { extractHttpError } from '../../shared/http-error';
 import {
   QuestionsService,
   type AutoUpdateJobStatus,
+  type AutoUpdateMode,
   type Question,
   type QuestionType,
 } from '../questions.service';
@@ -100,6 +101,7 @@ export class QuestionList {
 
   protected readonly actionError = signal<string | null>(null);
   protected readonly jobStatus = signal<AutoUpdateJobStatus | null>(null);
+  protected readonly jobMode = signal<AutoUpdateMode>('answer');
   protected readonly updating = computed(() => {
     const status = this.jobStatus()?.status;
     return status === 'pending' || status === 'running';
@@ -127,8 +129,12 @@ export class QuestionList {
     });
   }
 
-  protected startAutoUpdate(questionId?: string): void {
+  protected startAutoUpdate(
+    questionId?: string,
+    mode: AutoUpdateMode = 'answer',
+  ): void {
     this.actionError.set(null);
+    this.jobMode.set(mode);
     this.jobStatus.set({
       id: '',
       status: 'pending',
@@ -139,7 +145,7 @@ export class QuestionList {
     });
 
     this.questionsService
-      .startAutoUpdate(questionId)
+      .startAutoUpdate(questionId, mode)
       .pipe(
         switchMap(({ jobId }) => this.jobStatusService.watch(jobId)),
         takeUntilDestroyed(this.destroyRef),

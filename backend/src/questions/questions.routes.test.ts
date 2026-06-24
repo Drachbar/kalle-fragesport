@@ -17,6 +17,8 @@ function makeQuestion(over: Partial<Question> = {}): Question {
     autoUpdate: false,
     updateIntervalDays: 30,
     lastCheckedAt: null,
+    earliestUpdateAt: null,
+    answerAsOf: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     ...over,
@@ -33,6 +35,7 @@ function fakeRepo(over: Partial<QuestionsRepository> = {}): QuestionsRepository 
     create: vi.fn().mockResolvedValue(makeQuestion()),
     update: vi.fn().mockResolvedValue(makeQuestion()),
     markChecked: vi.fn().mockResolvedValue(undefined),
+    updateTiming: vi.fn().mockResolvedValue(undefined),
     remove: vi.fn().mockResolvedValue(true),
     ...over,
   };

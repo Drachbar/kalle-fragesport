@@ -79,6 +79,16 @@
   font-size: 1.5rem;
 }
 
+.warning {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--warning-bg, #fff4e5);
+  border: 1px solid var(--warning-border, #f0b429);
+  border-radius: var(--radius-lg);
+  color: var(--warning-text, #8a5300);
+  font-size: 0.9rem;
+}
+
 .sources {
   display: grid;
   gap: 0.25rem;

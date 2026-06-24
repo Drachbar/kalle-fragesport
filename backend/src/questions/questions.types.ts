@@ -12,6 +12,10 @@ export interface Question {
   updateIntervalDays: number;
   /** När AI:n senast kontrollerade frågan; null om aldrig. */
   lastCheckedAt: Date | null;
+  /** Tidigast datum då frågan ska kontrolleras; null = ingen gräns. */
+  earliestUpdateAt: Date | null;
+  /** Datum då nuvarande svar är aktuellt; null om okänt. */
+  answerAsOf: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -24,4 +28,8 @@ export interface QuestionInput {
   type: QuestionType;
   autoUpdate: boolean;
   updateIntervalDays: number;
+  /** ISO-datum eller null. */
+  earliestUpdateAt: string | null;
+  /** ISO-datum eller null. */
+  answerAsOf: string | null;
 }

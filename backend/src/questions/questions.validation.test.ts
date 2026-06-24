@@ -73,6 +73,34 @@ describe("createQuestionSchema", () => {
     expect(result.success).toBe(false);
   });
 
+  it("sätter earliestUpdateAt och answerAsOf till null när de saknas", () => {
+    const result = createQuestionSchema.safeParse({
+      question: "Fråga?",
+      answer: "Svar",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.earliestUpdateAt).toBeNull();
+      expect(result.data.answerAsOf).toBeNull();
+    }
+  });
+
+  it("behåller angivna datum för earliestUpdateAt och answerAsOf", () => {
+    const result = createQuestionSchema.safeParse({
+      question: "Fråga?",
+      answer: "Svar",
+      earliestUpdateAt: "2026-09-01",
+      answerAsOf: "2026-03-01",
+    });
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.earliestUpdateAt).toBe("2026-09-01");
+      expect(result.data.answerAsOf).toBe("2026-03-01");
+    }
+  });
+
   it("avvisar tom fråga", () => {
     const result = createQuestionSchema.safeParse({
       question: "",

@@ -15,6 +15,8 @@ function makeQuestion(over: Partial<Question> = {}): Question {
     autoUpdate: false,
     updateIntervalDays: 30,
     lastCheckedAt: null,
+    earliestUpdateAt: null,
+    answerAsOf: null,
     createdAt: '',
     updatedAt: '',
     ...over,

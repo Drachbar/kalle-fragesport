@@ -11,6 +11,14 @@
       >
         {{ updating() ? 'Uppdaterar…' : 'Auto-uppdatera svar' }}
       </button>
+      <button
+        type="button"
+        class="btn btn-ghost"
+        [disabled]="updating()"
+        (click)="startAutoUpdate(undefined, 'interval')"
+      >
+        Uppdatera intervall (alla)
+      </button>
       <a class="btn btn-primary" routerLink="/questions/new">Ny fråga</a>
     </div>
   }
@@ -21,7 +29,11 @@
     @if (job.status === 'pending' || job.status === 'running') {
       Bearbetar {{ job.processed }} av {{ job.total }} frågor…
     } @else if (job.status === 'completed') {
-      Klart: {{ job.processed }} frågor granskades och {{ job.suggestionsCreated }} förslag skapades.
+      @if (jobMode() === 'interval') {
+        Klart: {{ job.processed }} frågor fick uppdaterat intervall.
+      } @else {
+        Klart: {{ job.processed }} frågor granskades och {{ job.suggestionsCreated }} förslag skapades.
+      }
     }
   </p>
 }
@@ -82,6 +94,14 @@
               (click)="startAutoUpdate(q.id)"
             >
               Uppdatera med AI
+            </button>
+            <button
+              type="button"
+              class="btn btn-ghost"
+              [disabled]="updating()"
+              (click)="startAutoUpdate(q.id, 'interval')"
+            >
+              Uppdatera intervall
             </button>
             <button type="button" class="btn btn-ghost" (click)="remove(q)">
               Ta bort

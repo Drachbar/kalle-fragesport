@@ -23,11 +23,22 @@ async function resolveSingleQuestion(
   return question ? [question] : [];
 }
 
+/**
+ * "answer" = full körning som även skapar svarsförslag att granska.
+ * "interval" = uppdaterar bara tidsmetadata (intervall + tidigast-datum) direkt,
+ * skapar inga förslag.
+ */
+export type AutoUpdateMode = "answer" | "interval";
+
 /** Beroenden för ett auto-uppdateringsjobb (injiceras för testbarhet). */
 export interface AutoUpdateDeps {
   questionsRepo: Pick<
     QuestionsRepository,
-    "listAutoUpdate" | "listDueForAutoUpdate" | "getById" | "markChecked"
+    | "listAutoUpdate"
+    | "listDueForAutoUpdate"
+    | "getById"
+    | "markChecked"
+    | "updateTiming"
   >;
   suggestionsRepo: Pick<SuggestionsRepository, "create">;
   jobsRepo: Pick<JobsRepository, "update">;
@@ -42,6 +53,8 @@ export interface AutoUpdateDeps {
    * löpt ut. Används av den schemalagda körningen för att hålla kostnaden nere.
    */
   onlyDue?: boolean;
+  /** Läge: full svarsgranskning ("answer", default) eller bara intervall. */
+  mode?: AutoUpdateMode;
 }
 
 /**
@@ -62,13 +75,15 @@ export async function runAutoUpdateJob(
     researcher,
     questionId,
     onlyDue,
+    mode = "answer",
   } = deps;
   const log = baseLog.child(jobId);
   const startedAt = Date.now();
 
   log.info("Startar auto-uppdateringsjobb", {
     jobId,
-    mode: questionId ? "single" : onlyDue ? "due" : "all",
+    selection: questionId ? "single" : onlyDue ? "due" : "all",
+    mode,
     questionId,
   });
 
@@ -101,6 +116,11 @@ export async function runAutoUpdateJob(
         // Markera som kontrollerad direkt så att en förfallen fråga inte tas
         // om igen nästa schemakörning, oavsett om svaret ändrades.
         await questionsRepo.markChecked(question.id);
+        // Tidsmetadata är ingen korrekthetsfråga – skriv den direkt i båda lägena.
+        await questionsRepo.updateTiming(question.id, {
+          updateIntervalDays: result.suggestedIntervalDays,
+          earliestUpdateAt: result.suggestedEarliestUpdateAt,
+        });
         log.debug("AI-svar mottaget", {
           questionId: question.id,
           changed: result.changed,
@@ -109,6 +129,16 @@ export async function runAutoUpdateJob(
           sources: result.sources,
           durationMs: Date.now() - questionStart,
         });
+
+        // I intervall-läge uppdaterar vi bara tidsmetadatan ovan – inga förslag.
+        if (mode === "interval") {
+          log.info("Intervall uppdaterat (intervall-läge)", {
+            questionId: question.id,
+            suggestedIntervalDays: result.suggestedIntervalDays,
+            suggestedEarliestUpdateAt: result.suggestedEarliestUpdateAt,
+          });
+          continue;
+        }
 
         const suggestedOptions =
           question.type === "multiple_choice"
@@ -121,6 +151,12 @@ export async function runAutoUpdateJob(
         );
 
         if (result.changed && (answerChanged || optionsChanged)) {
+          // Flagga (men blockera inte) förslag vars info är äldre än nuvarande svar.
+          const olderThanCurrent = Boolean(
+            question.answerAsOf &&
+              result.answerAsOf &&
+              result.answerAsOf < question.answerAsOf.toISOString(),
+          );
           await suggestionsRepo.create({
             questionId: question.id,
             jobId,
@@ -132,12 +168,16 @@ export async function runAutoUpdateJob(
             reasoning: result.reasoning,
             confidence: result.confidence,
             suggestedIntervalDays: result.suggestedIntervalDays,
+            suggestedEarliestUpdateAt: result.suggestedEarliestUpdateAt,
+            answerAsOf: result.answerAsOf,
+            olderThanCurrent,
           });
           suggestionsCreated += 1;
           log.info("Förslag skapat", {
             questionId: question.id,
             answerChanged,
             optionsChanged,
+            olderThanCurrent,
             previousAnswer: question.answer,
             suggestedAnswer: result.suggestedAnswer,
           });

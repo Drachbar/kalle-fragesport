@@ -11,12 +11,14 @@ interface QuestionRow {
   auto_update: boolean;
   update_interval_days: number;
   last_checked_at: Date | null;
+  earliest_update_at: Date | null;
+  answer_as_of: Date | null;
   created_at: Date;
   updated_at: Date;
 }
 
 const SELECT_COLUMNS =
-  "id, question, answer, options, category, type, auto_update, update_interval_days, last_checked_at, created_at, updated_at";
+  "id, question, answer, options, category, type, auto_update, update_interval_days, last_checked_at, earliest_update_at, answer_as_of, created_at, updated_at";
 
 function mapRow(row: QuestionRow): Question {
   return {
@@ -30,6 +32,8 @@ function mapRow(row: QuestionRow): Question {
     autoUpdate: row.auto_update,
     updateIntervalDays: row.update_interval_days,
     lastCheckedAt: row.last_checked_at,
+    earliestUpdateAt: row.earliest_update_at,
+    answerAsOf: row.answer_as_of,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -46,6 +50,11 @@ export interface QuestionsRepository {
   update(id: string, input: QuestionInput): Promise<Question | null>;
   /** Markerar att frågan precis kontrollerats av AI:n (sätter last_checked_at). */
   markChecked(id: string): Promise<void>;
+  /** Uppdaterar bara tidsmetadata (intervall + tidigast-datum), inte svaret. */
+  updateTiming(
+    id: string,
+    timing: { updateIntervalDays: number; earliestUpdateAt: string | null },
+  ): Promise<void>;
   remove(id: string): Promise<boolean>;
 }
 
@@ -68,6 +77,7 @@ export const questionsRepository: QuestionsRepository = {
     const result = await getDatabase().query<QuestionRow>(
       `SELECT ${SELECT_COLUMNS} FROM questions
        WHERE auto_update = true
+         AND (earliest_update_at IS NULL OR earliest_update_at <= now())
          AND (
            last_checked_at IS NULL
            OR last_checked_at + (update_interval_days || ' days')::interval <= now()
@@ -102,10 +112,14 @@ export const questionsRepository: QuestionsRepository = {
     type,
     autoUpdate,
     updateIntervalDays,
+    earliestUpdateAt,
+    answerAsOf,
   }) {
     const result = await getDatabase().query<QuestionRow>(
-      `INSERT INTO questions (question, answer, options, category, type, auto_update, update_interval_days)
-       VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7)
+      `INSERT INTO questions
+         (question, answer, options, category, type, auto_update,
+          update_interval_days, earliest_update_at, answer_as_of)
+       VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7, $8, $9)
        RETURNING ${SELECT_COLUMNS}`,
       [
         question,
@@ -115,6 +129,8 @@ export const questionsRepository: QuestionsRepository = {
         type,
         autoUpdate,
         updateIntervalDays,
+        earliestUpdateAt,
+        answerAsOf,
       ],
     );
     return mapRow(result.rows[0]);
@@ -122,12 +138,23 @@ export const questionsRepository: QuestionsRepository = {
 
   async update(
     id,
-    { question, answer, options, category, type, autoUpdate, updateIntervalDays },
+    {
+      question,
+      answer,
+      options,
+      category,
+      type,
+      autoUpdate,
+      updateIntervalDays,
+      earliestUpdateAt,
+      answerAsOf,
+    },
   ) {
     const result = await getDatabase().query<QuestionRow>(
       `UPDATE questions
        SET question = $2, answer = $3, options = $4::jsonb, category = $5, type = $6,
-           auto_update = $7, update_interval_days = $8
+           auto_update = $7, update_interval_days = $8,
+           earliest_update_at = $9, answer_as_of = $10
        WHERE id = $1
        RETURNING ${SELECT_COLUMNS}`,
       [
@@ -139,6 +166,8 @@ export const questionsRepository: QuestionsRepository = {
         type,
         autoUpdate,
         updateIntervalDays,
+        earliestUpdateAt,
+        answerAsOf,
       ],
     );
     const row = result.rows[0];
@@ -149,6 +178,15 @@ export const questionsRepository: QuestionsRepository = {
     await getDatabase().query(
       `UPDATE questions SET last_checked_at = now() WHERE id = $1`,
       [id],
+    );
+  },
+
+  async updateTiming(id, { updateIntervalDays, earliestUpdateAt }) {
+    await getDatabase().query(
+      `UPDATE questions
+       SET update_interval_days = $2, earliest_update_at = $3
+       WHERE id = $1`,
+      [id, updateIntervalDays, earliestUpdateAt],
     );
   },
 

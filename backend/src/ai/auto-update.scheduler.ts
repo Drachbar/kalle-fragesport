@@ -19,7 +19,11 @@ export interface SchedulerDeps {
   db: Pick<Database, "tryRunExclusive">;
   questionsRepo: Pick<
     QuestionsRepository,
-    "listAutoUpdate" | "listDueForAutoUpdate" | "getById" | "markChecked"
+    | "listAutoUpdate"
+    | "listDueForAutoUpdate"
+    | "getById"
+    | "markChecked"
+    | "updateTiming"
   >;
   suggestionsRepo: Pick<SuggestionsRepository, "create">;
   jobsRepo: Pick<JobsRepository, "create" | "update" | "hasActive">;

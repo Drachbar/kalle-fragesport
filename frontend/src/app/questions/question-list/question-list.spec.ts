@@ -23,6 +23,8 @@ function makeQuestion(over: Partial<Question> = {}): Question {
     autoUpdate: false,
     updateIntervalDays: 30,
     lastCheckedAt: null,
+    earliestUpdateAt: null,
+    answerAsOf: null,
     createdAt: '',
     updatedAt: '',
     ...over,
@@ -186,8 +188,71 @@ describe('QuestionList', () => {
     await tick();
     fixture.detectChanges();
 
-    expect(startAutoUpdate).toHaveBeenCalledWith('q-1');
+    expect(startAutoUpdate).toHaveBeenCalledWith('q-1', 'answer');
     expect(watch).toHaveBeenCalledWith('job-1');
+  });
+
+  it('uppdaterar bara intervallet via intervall-knappen per fråga', async () => {
+    const startAutoUpdate = vi.fn(() => of({ jobId: 'job-1' }));
+    const watch = vi.fn(() =>
+      of({
+        id: 'job-1',
+        status: 'completed' as const,
+        total: 1,
+        processed: 1,
+        suggestionsCreated: 0,
+        error: null,
+      }),
+    );
+    const { http } = configure({
+      isAdmin: true,
+      service: { startAutoUpdate },
+      jobStatusService: { watch },
+    });
+    const fixture = await setup(http, [makeQuestion({ id: 'q-1' })]);
+    const el = fixture.nativeElement as HTMLElement;
+
+    const btn = Array.from(el.querySelectorAll('button')).find(
+      (b) => b.textContent?.trim() === 'Uppdatera intervall',
+    ) as HTMLButtonElement;
+    btn.click();
+    fixture.detectChanges();
+    await tick();
+    fixture.detectChanges();
+
+    expect(startAutoUpdate).toHaveBeenCalledWith('q-1', 'interval');
+    expect(el.textContent).toContain('fick uppdaterat intervall');
+  });
+
+  it('uppdaterar intervall för alla via headern', async () => {
+    const startAutoUpdate = vi.fn(() => of({ jobId: 'job-1' }));
+    const watch = vi.fn(() =>
+      of({
+        id: 'job-1',
+        status: 'completed' as const,
+        total: 2,
+        processed: 2,
+        suggestionsCreated: 0,
+        error: null,
+      }),
+    );
+    const { http } = configure({
+      isAdmin: true,
+      service: { startAutoUpdate },
+      jobStatusService: { watch },
+    });
+    const fixture = await setup(http, [makeQuestion({ id: 'q-1' })]);
+    const el = fixture.nativeElement as HTMLElement;
+
+    const btn = Array.from(el.querySelectorAll('button')).find(
+      (b) => b.textContent?.trim() === 'Uppdatera intervall (alla)',
+    ) as HTMLButtonElement;
+    btn.click();
+    fixture.detectChanges();
+    await tick();
+    fixture.detectChanges();
+
+    expect(startAutoUpdate).toHaveBeenCalledWith(undefined, 'interval');
   });
 
   it('visar serverns felmeddelande när AI-uppdateringen misslyckas', async () => {

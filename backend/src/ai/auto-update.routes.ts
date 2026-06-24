@@ -26,7 +26,12 @@ const log = createLogger("ai:auto-update");
 export interface AutoUpdateRouterDeps {
   questionsRepo: Pick<
     QuestionsRepository,
-    "getById" | "update" | "listAutoUpdate" | "listDueForAutoUpdate" | "markChecked"
+    | "getById"
+    | "update"
+    | "listAutoUpdate"
+    | "listDueForAutoUpdate"
+    | "markChecked"
+    | "updateTiming"
   >;
   jobsRepo: Pick<
     JobsRepository,
@@ -86,11 +91,15 @@ export function createAutoUpdateRouter(
   } = deps;
   const router = Router();
 
-  // Valfritt: begränsa jobbet till en specifik fråga.
-  const startSchema = z.object({ questionId: z.string().min(1).optional() });
+  // Valfritt: begränsa jobbet till en specifik fråga, och välj läge.
+  const startSchema = z.object({
+    questionId: z.string().min(1).optional(),
+    mode: z.enum(["answer", "interval"]).default("answer"),
+  });
 
   // Starta ett bakgrundsjobb. Utan questionId körs alla tidskänsliga frågor;
-  // med questionId uppdateras enbart den valda frågan.
+  // med questionId uppdateras enbart den valda frågan. mode "interval" uppdaterar
+  // bara kontrollintervallet (skapar inga svarsförslag).
   router.post("/auto-update", requireAdmin, async (req, res) => {
     const userId = req.session.userId as string;
     const parsed = startSchema.safeParse(req.body ?? {});
@@ -102,6 +111,7 @@ export function createAutoUpdateRouter(
     log.info("Begäran om auto-uppdatering", {
       userId,
       questionId: parsed.data.questionId,
+      mode: parsed.data.mode,
     });
 
     if (await jobsRepo.hasActive()) {
@@ -144,6 +154,7 @@ export function createAutoUpdateRouter(
       jobsRepo,
       researcher,
       questionId: parsed.data.questionId,
+      mode: parsed.data.mode,
     });
 
     res.status(201).json({ jobId: job.id });
@@ -197,9 +208,16 @@ export function createAutoUpdateRouter(
       category: question.category,
       type: question.type,
       autoUpdate: question.autoUpdate,
-      // Applicera AI:ns rekommenderade intervall om ett föreslogs.
+      // Applicera AI:ns rekommenderade intervall/datum om de föreslogs.
       updateIntervalDays:
         suggestion.suggestedIntervalDays ?? question.updateIntervalDays,
+      earliestUpdateAt:
+        suggestion.suggestedEarliestUpdateAt ??
+        question.earliestUpdateAt?.toISOString() ??
+        null,
+      // Det godkända svaret gäller per AI:ns angivna datum.
+      answerAsOf:
+        suggestion.answerAsOf ?? question.answerAsOf?.toISOString() ?? null,
     };
     await questionsRepo.update(question.id, input);
     await suggestionsRepo.setStatus(id, "approved");

@@ -21,6 +21,11 @@
     @for (suggestion of suggestions.value(); track suggestion.id) {
       <li class="suggestion-card">
         <h2>{{ suggestion.question }}</h2>
+        @if (suggestion.olderThanCurrent) {
+          <p role="alert" class="warning">
+            ⚠ AI:ns källa är äldre än nuvarande svar – granska noga innan du godkänner.
+          </p>
+        }
         <div class="answer-change">
           <div><span>Nuvarande svar</span><strong>{{ suggestion.previousAnswer }}</strong></div>
           <span class="arrow" aria-hidden="true">→</span>
@@ -54,16 +59,28 @@
         @if (confidencePercent(suggestion.confidence); as confidence) {
           <p class="meta">Säkerhet: {{ confidence }} %</p>
         }
+        @if (suggestion.answerAsOf) {
+          <p class="meta">Svaret gäller per: {{ suggestion.answerAsOf | date: 'yyyy-MM-dd' }}</p>
+        }
         @if (suggestion.suggestedIntervalDays) {
           <p class="meta">
             Föreslaget kontrollintervall: var {{ suggestion.suggestedIntervalDays }}:e dag
           </p>
         }
+        @if (suggestion.suggestedEarliestUpdateAt) {
+          <p class="meta">
+            Tidigast nästa kontroll: {{ suggestion.suggestedEarliestUpdateAt | date: 'yyyy-MM-dd' }}
+          </p>
+        }
         @if (suggestion.sources.length > 0) {
           <p class="sources">
             Källor:
-            @for (source of suggestion.sources; track source) {
-              <a [href]="source" target="_blank" rel="noopener noreferrer">{{ source }}</a>
+            @for (source of suggestion.sources; track source.url) {
+              <a [href]="source.url" target="_blank" rel="noopener noreferrer">
+                {{ source.url }}@if (source.publishedAt) {
+                  ({{ source.publishedAt | date: 'yyyy-MM-dd' }})
+                }
+              </a>
             }
           </p>
         }

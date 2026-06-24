@@ -14,6 +14,16 @@ export const createQuestionSchema = z.object({
   type: questionTypeSchema.default("multiple_choice"),
   autoUpdate: z.boolean().default(false),
   updateIntervalDays: z.number().int().min(1).default(30),
+  earliestUpdateAt: z
+    .string()
+    .min(1)
+    .nullish()
+    .transform((v) => v ?? null),
+  answerAsOf: z
+    .string()
+    .min(1)
+    .nullish()
+    .transform((v) => v ?? null),
 });
 
 // PUT ersätter hela frågan – samma form som vid skapande.

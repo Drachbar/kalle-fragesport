@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
+import { DatePipe } from '@angular/common';
 import { httpResource } from '@angular/common/http';
 import { RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -7,7 +8,7 @@ import { extractHttpError } from '../../shared/http-error';
 
 @Component({
   selector: 'app-suggestion-review',
-  imports: [RouterLink],
+  imports: [RouterLink, DatePipe],
   templateUrl: './suggestion-review.html',
   styleUrl: './suggestion-review.css',
   changeDetection: ChangeDetectionStrategy.OnPush,

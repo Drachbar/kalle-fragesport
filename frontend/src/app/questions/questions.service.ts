@@ -14,6 +14,8 @@ export interface Question {
   autoUpdate: boolean;
   updateIntervalDays: number;
   lastCheckedAt: string | null;
+  earliestUpdateAt: string | null;
+  answerAsOf: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -26,6 +28,15 @@ export interface QuestionInput {
   type: QuestionType;
   autoUpdate: boolean;
   updateIntervalDays: number;
+  earliestUpdateAt: string | null;
+  answerAsOf: string | null;
+}
+
+export type AutoUpdateMode = 'answer' | 'interval';
+
+export interface SuggestionSource {
+  url: string;
+  publishedAt: string | null;
 }
 
 export type JobStatus = 'pending' | 'running' | 'completed' | 'failed';
@@ -47,10 +58,13 @@ export interface PendingSuggestion {
   suggestedAnswer: string;
   previousOptions: string[];
   suggestedOptions: string[];
-  sources: string[];
+  sources: SuggestionSource[];
   reasoning: string | null;
   confidence: number | null;
   suggestedIntervalDays: number | null;
+  suggestedEarliestUpdateAt: string | null;
+  answerAsOf: string | null;
+  olderThanCurrent: boolean;
   status: 'pending' | 'approved' | 'rejected';
   createdAt: string;
 }
@@ -96,13 +110,21 @@ export class QuestionsService {
   }
 
   /**
-   * Startar ett AI-jobb som söker upp aktuella svar. Utan `questionId` körs alla
-   * tidskänsliga frågor; med `questionId` uppdateras bara den valda frågan.
+   * Startar ett AI-jobb. Utan `questionId` körs alla tidskänsliga frågor; med
+   * `questionId` bara den valda. `mode: 'interval'` uppdaterar enbart
+   * kontrollintervallet (skapar inga svarsförslag).
    */
-  startAutoUpdate(questionId?: string): Observable<{ jobId: string }> {
+  startAutoUpdate(
+    questionId?: string,
+    mode: AutoUpdateMode = 'answer',
+  ): Observable<{ jobId: string }> {
+    const body: { questionId?: string; mode: AutoUpdateMode } = { mode };
+    if (questionId) {
+      body.questionId = questionId;
+    }
     return this.http.post<{ jobId: string }>(
       `${this.baseUrl}/auto-update`,
-      questionId ? { questionId } : {},
+      body,
       { withCredentials: true },
     );
   }

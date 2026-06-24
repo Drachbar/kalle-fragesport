@@ -1,4 +1,5 @@
 import { getDatabase } from "../db";
+import type { ResearchSource } from "../ai/answer-researcher";
 
 export type SuggestionStatus = "pending" | "approved" | "rejected";
 
@@ -10,11 +11,17 @@ export interface AnswerSuggestion {
   suggestedAnswer: string;
   previousOptions: string[];
   suggestedOptions: string[];
-  sources: string[];
+  sources: ResearchSource[];
   reasoning: string | null;
   confidence: number | null;
   /** AI:ns rekommenderade kontrollintervall (dagar); null om inget föreslogs. */
   suggestedIntervalDays: number | null;
+  /** AI:ns föreslagna tidigast-datum (ISO); null om inget. */
+  suggestedEarliestUpdateAt: string | null;
+  /** Datum det föreslagna svaret gäller per (ISO); null om okänt. */
+  answerAsOf: string | null;
+  /** True om AI:ns källa är äldre än frågans nuvarande svar. */
+  olderThanCurrent: boolean;
   status: SuggestionStatus;
   createdAt: Date;
 }
@@ -31,10 +38,13 @@ export interface SuggestionInput {
   suggestedAnswer: string;
   previousOptions: string[];
   suggestedOptions: string[];
-  sources: string[];
+  sources: ResearchSource[];
   reasoning: string | null;
   confidence: number | null;
   suggestedIntervalDays: number | null;
+  suggestedEarliestUpdateAt: string | null;
+  answerAsOf: string | null;
+  olderThanCurrent: boolean;
 }
 
 interface SuggestionRow {
@@ -45,16 +55,38 @@ interface SuggestionRow {
   suggested_answer: string;
   previous_options: string[];
   suggested_options: string[];
-  sources: string[];
+  sources: unknown;
   reasoning: string | null;
   confidence: number | null;
   suggested_interval_days: number | null;
+  suggested_earliest_update_at: Date | null;
+  answer_as_of: Date | null;
+  older_than_current: boolean;
   status: SuggestionStatus;
   created_at: Date;
 }
 
 const SELECT_COLUMNS =
-  "id, question_id, job_id, previous_answer, suggested_answer, previous_options, suggested_options, sources, reasoning, confidence, suggested_interval_days, status, created_at";
+  "id, question_id, job_id, previous_answer, suggested_answer, previous_options, suggested_options, sources, reasoning, confidence, suggested_interval_days, suggested_earliest_update_at, answer_as_of, older_than_current, status, created_at";
+
+/** Normaliserar lagrade källor (äldre rader kan vara string[]) till objektform. */
+function normalizeSources(raw: unknown): ResearchSource[] {
+  if (!Array.isArray(raw)) {
+    return [];
+  }
+  return raw.map((item) =>
+    typeof item === "string"
+      ? { url: item, publishedAt: null }
+      : {
+          url: String((item as ResearchSource).url ?? ""),
+          publishedAt: (item as ResearchSource).publishedAt ?? null,
+        },
+  );
+}
+
+function toIso(date: Date | null): string | null {
+  return date ? date.toISOString() : null;
+}
 
 function mapRow(row: SuggestionRow): AnswerSuggestion {
   return {
@@ -66,10 +98,13 @@ function mapRow(row: SuggestionRow): AnswerSuggestion {
     previousOptions: row.previous_options,
     suggestedOptions: row.suggested_options,
     // jsonb returneras redan som parsad array av pg.
-    sources: row.sources,
+    sources: normalizeSources(row.sources),
     reasoning: row.reasoning,
     confidence: row.confidence,
     suggestedIntervalDays: row.suggested_interval_days,
+    suggestedEarliestUpdateAt: toIso(row.suggested_earliest_update_at),
+    answerAsOf: toIso(row.answer_as_of),
+    olderThanCurrent: row.older_than_current,
     status: row.status,
     createdAt: row.created_at,
   };
@@ -97,13 +132,17 @@ export const suggestionsRepository: SuggestionsRepository = {
     reasoning,
     confidence,
     suggestedIntervalDays,
+    suggestedEarliestUpdateAt,
+    answerAsOf,
+    olderThanCurrent,
   }) {
     const result = await getDatabase().query<SuggestionRow>(
       `INSERT INTO answer_suggestions
          (question_id, job_id, previous_answer, suggested_answer,
           previous_options, suggested_options, sources, reasoning, confidence,
-          suggested_interval_days)
-       VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8, $9, $10)
+          suggested_interval_days, suggested_earliest_update_at, answer_as_of,
+          older_than_current)
+       VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7::jsonb, $8, $9, $10, $11, $12, $13)
        RETURNING ${SELECT_COLUMNS}`,
       [
         questionId,
@@ -116,6 +155,9 @@ export const suggestionsRepository: SuggestionsRepository = {
         reasoning,
         confidence,
         suggestedIntervalDays,
+        suggestedEarliestUpdateAt,
+        answerAsOf,
+        olderThanCurrent,
       ],
     );
     return mapRow(result.rows[0]);
@@ -126,6 +168,7 @@ export const suggestionsRepository: SuggestionsRepository = {
       `SELECT s.id, s.question_id, s.job_id, s.previous_answer, s.suggested_answer,
               s.previous_options, s.suggested_options, s.sources,
               s.reasoning, s.confidence, s.suggested_interval_days,
+              s.suggested_earliest_update_at, s.answer_as_of, s.older_than_current,
               s.status, s.created_at,
               q.question
        FROM answer_suggestions s

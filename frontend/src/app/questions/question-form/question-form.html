@@ -68,7 +68,35 @@
         utifrån hur snabbt svaret kan ändras.
       </p>
     </div>
+
+    <div class="field">
+      <label for="q-earliest-update">Tidigast uppdateras (valfritt)</label>
+      <input
+        id="q-earliest-update"
+        type="date"
+        formControlName="earliestUpdateAt"
+        aria-describedby="q-earliest-update-hint"
+      />
+      <p id="q-earliest-update-hint" class="field-hint">
+        Finns ett tydligt datum då svaret kan ändras (t.ex. valdag eller final)?
+        Då hoppas frågan över tills dess.
+      </p>
+    </div>
   }
+
+  <div class="field">
+    <label for="q-answer-as-of">Svaret gäller per (valfritt)</label>
+    <input
+      id="q-answer-as-of"
+      type="date"
+      formControlName="answerAsOf"
+      aria-describedby="q-answer-as-of-hint"
+    />
+    <p id="q-answer-as-of-hint" class="field-hint">
+      Datum då nuvarande svar är aktuellt. Hindrar AI:n från att föreslå äldre
+      information än så.
+    </p>
+  </div>
 
   <fieldset class="field options" formArrayName="options">
     <legend>Svarsalternativ</legend>

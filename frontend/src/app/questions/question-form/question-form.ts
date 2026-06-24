@@ -22,6 +22,17 @@ import {
 } from '../questions.service';
 import { controlError } from '../../shared/form-errors';
 
+/** ISO-datum/tidsstämpel → 'YYYY-MM-DD' för ett date-input; tomt om null. */
+function toDateInput(value: string | null): string {
+  return value ? value.slice(0, 10) : '';
+}
+
+/** Tomt date-input → null, annars värdet oförändrat. */
+function fromDateInput(value: string): string | null {
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
 @Component({
   selector: 'app-question-form',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -50,6 +61,8 @@ export class QuestionForm implements OnInit {
     category: [''],
     autoUpdate: [false],
     updateIntervalDays: [30, [Validators.required, Validators.min(1)]],
+    earliestUpdateAt: [''],
+    answerAsOf: [''],
     options: new FormArray<FormControl<string>>([]),
   });
 
@@ -71,6 +84,8 @@ export class QuestionForm implements OnInit {
         category: question.category ?? '',
         autoUpdate: question.autoUpdate,
         updateIntervalDays: question.updateIntervalDays,
+        earliestUpdateAt: toDateInput(question.earliestUpdateAt),
+        answerAsOf: toDateInput(question.answerAsOf),
       });
       this.options.clear();
       for (const option of question.options) {
@@ -114,6 +129,8 @@ export class QuestionForm implements OnInit {
       category: category.length > 0 ? category : null,
       autoUpdate: raw.autoUpdate,
       updateIntervalDays: raw.updateIntervalDays,
+      earliestUpdateAt: fromDateInput(raw.earliestUpdateAt),
+      answerAsOf: fromDateInput(raw.answerAsOf),
       options: raw.options
         .map((option) => option.trim())
         .filter((option) => option.length > 0),
