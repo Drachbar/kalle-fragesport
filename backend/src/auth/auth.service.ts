@@ -10,6 +10,14 @@ export class EmailAlreadyInUseError extends Error {
   }
 }
 
+/** Kastas när ett angivet lösenord inte stämmer (eller användaren saknas). */
+export class InvalidPasswordError extends Error {
+  constructor() {
+    super("Fel lösenord");
+    this.name = "InvalidPasswordError";
+  }
+}
+
 /** True om felet är en unik-constraint-överträdelse i Postgres. */
 function isUniqueViolation(err: unknown): boolean {
   return (
@@ -63,4 +71,40 @@ export async function loginUser(
 
   const ok = await verifyPassword(password, user.passwordHash);
   return ok ? user : null;
+}
+
+/**
+ * Byter lösenord för en användare. Kräver att nuvarande lösenord stämmer,
+ * annars kastas InvalidPasswordError (även om användaren saknas).
+ */
+export async function changePassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string,
+  repo: UsersRepository = usersRepository,
+): Promise<void> {
+  const user = await repo.findUserById(userId);
+  if (!user || !(await verifyPassword(currentPassword, user.passwordHash))) {
+    throw new InvalidPasswordError();
+  }
+
+  const passwordHash = await hashPassword(newPassword);
+  await repo.updatePassword(userId, passwordHash);
+}
+
+/**
+ * Raderar en användares konto. Kräver att lösenordet stämmer, annars kastas
+ * InvalidPasswordError (även om användaren saknas).
+ */
+export async function deleteAccount(
+  userId: string,
+  password: string,
+  repo: UsersRepository = usersRepository,
+): Promise<void> {
+  const user = await repo.findUserById(userId);
+  if (!user || !(await verifyPassword(password, user.passwordHash))) {
+    throw new InvalidPasswordError();
+  }
+
+  await repo.deleteUser(userId);
 }

@@ -3,7 +3,7 @@ import express from "express";
 import session from "express-session";
 import request from "supertest";
 import { createAuthRouter, type AuthRouterDeps } from "./auth.routes";
-import { EmailAlreadyInUseError } from "./auth.service";
+import { EmailAlreadyInUseError, InvalidPasswordError } from "./auth.service";
 import type { User } from "../users/users.types";
 
 function makeUser(over: Partial<User> = {}): User {
@@ -30,6 +30,8 @@ function makeApp(deps: Partial<AuthRouterDeps>) {
       registerUser: deps.registerUser ?? vi.fn(),
       loginUser: deps.loginUser ?? vi.fn(),
       findUserById: deps.findUserById ?? vi.fn(),
+      changePassword: deps.changePassword ?? vi.fn(),
+      deleteAccount: deps.deleteAccount ?? vi.fn(),
     }),
   );
   return app;
@@ -133,5 +135,115 @@ describe("GET /auth/me", () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toMatchObject({ email: "kalle@post.se", role: "admin" });
+  });
+});
+
+/** Loggar in en agent så att efterföljande anrop har en giltig session. */
+async function loginAgent(app: ReturnType<typeof makeApp>) {
+  const agent = request.agent(app);
+  await agent
+    .post("/auth/login")
+    .send({ email: "kalle@post.se", password: "hemligt123" });
+  return agent;
+}
+
+describe("PUT /auth/me/password", () => {
+  it("svarar 401 när ingen är inloggad", async () => {
+    const res = await request(makeApp({}))
+      .put("/auth/me/password")
+      .send({ currentPassword: "nuvarande123", newPassword: "nyttlosen456" });
+
+    expect(res.status).toBe(401);
+  });
+
+  it("byter lösenord för inloggad användare → 204", async () => {
+    const changePassword = vi.fn().mockResolvedValue(undefined);
+    const app = makeApp({
+      loginUser: vi.fn().mockResolvedValue(makeUser()),
+      changePassword,
+    });
+    const agent = await loginAgent(app);
+
+    const res = await agent
+      .put("/auth/me/password")
+      .send({ currentPassword: "nuvarande123", newPassword: "nyttlosen456" });
+
+    expect(res.status).toBe(204);
+    expect(changePassword).toHaveBeenCalledWith(
+      "id-1",
+      "nuvarande123",
+      "nyttlosen456",
+    );
+  });
+
+  it("svarar 403 vid fel nuvarande lösenord", async () => {
+    const app = makeApp({
+      loginUser: vi.fn().mockResolvedValue(makeUser()),
+      changePassword: vi.fn().mockRejectedValue(new InvalidPasswordError()),
+    });
+    const agent = await loginAgent(app);
+
+    const res = await agent
+      .put("/auth/me/password")
+      .send({ currentPassword: "fel", newPassword: "nyttlosen456" });
+
+    expect(res.status).toBe(403);
+  });
+
+  it("svarar 400 när nytt lösenord är för kort", async () => {
+    const changePassword = vi.fn();
+    const app = makeApp({
+      loginUser: vi.fn().mockResolvedValue(makeUser()),
+      changePassword,
+    });
+    const agent = await loginAgent(app);
+
+    const res = await agent
+      .put("/auth/me/password")
+      .send({ currentPassword: "nuvarande123", newPassword: "kort" });
+
+    expect(res.status).toBe(400);
+    expect(changePassword).not.toHaveBeenCalled();
+  });
+});
+
+describe("DELETE /auth/me", () => {
+  it("svarar 401 när ingen är inloggad", async () => {
+    const res = await request(makeApp({}))
+      .delete("/auth/me")
+      .send({ password: "nuvarande123" });
+
+    expect(res.status).toBe(401);
+  });
+
+  it("raderar kontot och loggar ut → 204", async () => {
+    const deleteAccount = vi.fn().mockResolvedValue(undefined);
+    const app = makeApp({
+      loginUser: vi.fn().mockResolvedValue(makeUser()),
+      findUserById: vi.fn().mockResolvedValue(makeUser()),
+      deleteAccount,
+    });
+    const agent = await loginAgent(app);
+
+    const res = await agent.delete("/auth/me").send({ password: "nuvarande123" });
+
+    expect(res.status).toBe(204);
+    expect(deleteAccount).toHaveBeenCalledWith("id-1", "nuvarande123");
+
+    // Sessionen ska vara borta efteråt.
+    const after = await agent.get("/auth/me");
+    expect(after.status).toBe(401);
+  });
+
+  it("svarar 403 vid fel lösenord", async () => {
+    const app = makeApp({
+      loginUser: vi.fn().mockResolvedValue(makeUser()),
+      deleteAccount: vi.fn().mockRejectedValue(new InvalidPasswordError()),
+    });
+    const agent = await loginAgent(app);
+
+    const res = await agent.delete("/auth/me").send({ password: "fel" });
+
+    expect(res.status).toBe(403);
   });
 });

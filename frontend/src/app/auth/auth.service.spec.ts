@@ -96,4 +96,33 @@ describe('AuthService', () => {
     expect(service.currentUser()).toBeNull();
     expect(service.isLoggedIn()).toBe(false);
   });
+
+  it('changePassword PUT:ar nuvarande och nytt lösenord', () => {
+    service.changePassword('nuvarande123', 'nyttlosen456').subscribe();
+
+    const req = httpMock.expectOne('/api/auth/me/password');
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.withCredentials).toBe(true);
+    expect(req.request.body).toEqual({
+      currentPassword: 'nuvarande123',
+      newPassword: 'nyttlosen456',
+    });
+    req.flush(null, { status: 204, statusText: 'No Content' });
+  });
+
+  it('deleteAccount DELETE:ar med lösenord och nollställer currentUser', () => {
+    service.login('kalle@post.se', 'hemligt123').subscribe();
+    httpMock.expectOne('/api/auth/login').flush(admin);
+    expect(service.isLoggedIn()).toBe(true);
+
+    service.deleteAccount('hemligt123').subscribe();
+    const req = httpMock.expectOne('/api/auth/me');
+    expect(req.request.method).toBe('DELETE');
+    expect(req.request.withCredentials).toBe(true);
+    expect(req.request.body).toEqual({ password: 'hemligt123' });
+    req.flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(service.currentUser()).toBeNull();
+    expect(service.isLoggedIn()).toBe(false);
+  });
 });

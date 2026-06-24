@@ -11,6 +11,7 @@
         @if (auth.isAdmin()) {
           <a routerLink="/settings">Inställningar</a>
         }
+        <a routerLink="/konto">Konto</a>
         <span class="user">{{ auth.currentUser()?.email }}</span>
         <button type="button" class="btn btn-ghost" (click)="logout()">
           Logga ut

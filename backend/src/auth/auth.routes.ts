@@ -3,8 +3,12 @@ import { z } from "zod";
 import {
   registerUser as defaultRegisterUser,
   loginUser as defaultLoginUser,
+  changePassword as defaultChangePassword,
+  deleteAccount as defaultDeleteAccount,
   EmailAlreadyInUseError,
+  InvalidPasswordError,
 } from "./auth.service";
+import { requireAuth } from "./middleware";
 import { usersRepository } from "../users/users.repository";
 import { createLogger } from "../logging/logger";
 
@@ -20,16 +24,34 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8),
+});
+
+const deleteAccountSchema = z.object({
+  password: z.string().min(1),
+});
+
 export interface AuthRouterDeps {
   registerUser: typeof defaultRegisterUser;
   loginUser: typeof defaultLoginUser;
   findUserById: typeof usersRepository.findUserById;
+  changePassword: (
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ) => Promise<void>;
+  deleteAccount: (userId: string, password: string) => Promise<void>;
 }
 
 const defaultDeps: AuthRouterDeps = {
   registerUser: defaultRegisterUser,
   loginUser: defaultLoginUser,
   findUserById: (id) => usersRepository.findUserById(id),
+  changePassword: (userId, currentPassword, newPassword) =>
+    defaultChangePassword(userId, currentPassword, newPassword),
+  deleteAccount: (userId, password) => defaultDeleteAccount(userId, password),
 };
 
 export function createAuthRouter(deps: AuthRouterDeps = defaultDeps): Router {
@@ -118,6 +140,61 @@ export function createAuthRouter(deps: AuthRouterDeps = defaultDeps): Router {
     }
 
     res.json({ id: user.id, email: user.email, role: user.role });
+  });
+
+  // Byt lösenord. Kräver inloggning + korrekt nuvarande lösenord.
+  router.put("/me/password", requireAuth, async (req, res) => {
+    const parsed = changePasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Ogiltiga uppgifter" });
+      return;
+    }
+
+    try {
+      await deps.changePassword(
+        req.session.userId!,
+        parsed.data.currentPassword,
+        parsed.data.newPassword,
+      );
+      log.info("Lösenord ändrat", { userId: req.session.userId });
+      res.status(204).end();
+    } catch (err) {
+      if (err instanceof InvalidPasswordError) {
+        res.status(403).json({ error: "Fel nuvarande lösenord" });
+        return;
+      }
+      throw err;
+    }
+  });
+
+  // Radera kontot. Kräver inloggning + korrekt lösenord. Loggar ut efteråt.
+  router.delete("/me", requireAuth, async (req, res) => {
+    const parsed = deleteAccountSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Ogiltiga uppgifter" });
+      return;
+    }
+
+    const userId = req.session.userId!;
+    try {
+      await deps.deleteAccount(userId, parsed.data.password);
+    } catch (err) {
+      if (err instanceof InvalidPasswordError) {
+        res.status(403).json({ error: "Fel lösenord" });
+        return;
+      }
+      throw err;
+    }
+
+    log.info("Konto raderat", { userId });
+    req.session.destroy((err) => {
+      if (err) {
+        res.status(500).json({ error: "Kontot raderades men utloggning misslyckades" });
+        return;
+      }
+      res.clearCookie("connect.sid");
+      res.status(204).end();
+    });
   });
 
   return router;

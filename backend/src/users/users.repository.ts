@@ -33,6 +33,8 @@ export interface UsersRepository {
   createUser(input: NewUser): Promise<User>;
   findUserByEmail(email: string): Promise<User | null>;
   findUserById(id: string): Promise<User | null>;
+  updatePassword(id: string, passwordHash: string): Promise<void>;
+  deleteUser(id: string): Promise<void>;
 }
 
 export const usersRepository: UsersRepository = {
@@ -62,5 +64,18 @@ export const usersRepository: UsersRepository = {
     );
     const row = result.rows[0];
     return row ? mapRow(row) : null;
+  },
+
+  async updatePassword(id, passwordHash) {
+    // updated_at sätts av triggern users_set_updated_at.
+    await getDatabase().query(
+      `UPDATE users SET password_hash = $2 WHERE id = $1`,
+      [id, passwordHash],
+    );
+  },
+
+  async deleteUser(id) {
+    // user_openai_keys raderas via ON DELETE CASCADE.
+    await getDatabase().query(`DELETE FROM users WHERE id = $1`, [id]);
   },
 };

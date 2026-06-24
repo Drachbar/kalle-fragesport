@@ -53,6 +53,28 @@ export class AuthService {
       .pipe(tap(() => this.user.set(null)));
   }
 
+  /** Byter lösenord. Kräver att nuvarande lösenord stämmer (verifieras i backend). */
+  changePassword(
+    currentPassword: string,
+    newPassword: string,
+  ): Observable<void> {
+    return this.http.put<void>(
+      '/api/auth/me/password',
+      { currentPassword, newPassword },
+      { withCredentials: true },
+    );
+  }
+
+  /** Raderar kontot (kräver lösenord) och nollställer state. */
+  deleteAccount(password: string): Observable<void> {
+    return this.http
+      .delete<void>('/api/auth/me', {
+        body: { password },
+        withCredentials: true,
+      })
+      .pipe(tap(() => this.user.set(null)));
+  }
+
   /** Hämtar aktuell användare via cookien; nollställer state vid fel. */
   loadCurrentUser(): Observable<AuthUser> {
     return this.http

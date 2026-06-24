@@ -1,0 +1,118 @@
+<div class="account">
+  <h1>Mitt konto</h1>
+
+  <section class="card">
+    <h2>Byt lösenord</h2>
+
+    @if (passwordSuccess()) {
+      <p class="success" role="status">Lösenordet har uppdaterats.</p>
+    }
+
+    <form
+      class="password-form"
+      [formGroup]="passwordForm"
+      (ngSubmit)="changePassword()"
+      novalidate
+    >
+      @if (passwordError()) {
+        <p role="alert" class="error">{{ passwordError() }}</p>
+      }
+
+      <div class="field">
+        <label for="current-password">Nuvarande lösenord</label>
+        <input
+          id="current-password"
+          type="password"
+          autocomplete="current-password"
+          formControlName="currentPassword"
+          [attr.aria-invalid]="isInvalid('currentPassword')"
+          aria-describedby="current-password-error"
+        />
+        @if (errorFor('currentPassword'); as msg) {
+          <p id="current-password-error" role="alert" class="field-error">
+            {{ msg }}
+          </p>
+        }
+      </div>
+
+      <div class="field">
+        <label for="new-password">Nytt lösenord (minst 8 tecken)</label>
+        <input
+          id="new-password"
+          type="password"
+          autocomplete="new-password"
+          formControlName="newPassword"
+          [attr.aria-invalid]="isInvalid('newPassword')"
+          aria-describedby="new-password-error"
+        />
+        @if (errorFor('newPassword'); as msg) {
+          <p id="new-password-error" role="alert" class="field-error">
+            {{ msg }}
+          </p>
+        }
+      </div>
+
+      <div class="field">
+        <label for="confirm-new-password">Bekräfta nytt lösenord</label>
+        <input
+          id="confirm-new-password"
+          type="password"
+          autocomplete="new-password"
+          formControlName="confirmNewPassword"
+          [attr.aria-invalid]="isInvalid('confirmNewPassword')"
+          aria-describedby="confirm-new-password-error"
+        />
+        @if (errorFor('confirmNewPassword'); as msg) {
+          <p id="confirm-new-password-error" role="alert" class="field-error">
+            {{ msg }}
+          </p>
+        }
+      </div>
+
+      <button
+        type="submit"
+        class="btn btn-primary"
+        [disabled]="passwordSubmitting()"
+      >
+        {{ passwordSubmitting() ? 'Uppdaterar…' : 'Uppdatera lösenord' }}
+      </button>
+    </form>
+  </section>
+
+  <section class="card danger">
+    <h2>Ta bort konto</h2>
+    <p class="danger-note">
+      Att ta bort kontot är permanent och kan inte ångras. Skriv in ditt
+      lösenord för att bekräfta.
+    </p>
+
+    <form
+      class="delete-form"
+      [formGroup]="deleteForm"
+      (ngSubmit)="deleteAccount()"
+      novalidate
+    >
+      @if (deleteError()) {
+        <p role="alert" class="error">{{ deleteError() }}</p>
+      }
+
+      <div class="field">
+        <label for="delete-password">Lösenord</label>
+        <input
+          id="delete-password"
+          type="password"
+          autocomplete="current-password"
+          formControlName="password"
+        />
+      </div>
+
+      <button
+        type="submit"
+        class="btn btn-danger"
+        [disabled]="deleteSubmitting()"
+      >
+        {{ deleteSubmitting() ? 'Tar bort…' : 'Ta bort konto' }}
+      </button>
+    </form>
+  </section>
+</div>

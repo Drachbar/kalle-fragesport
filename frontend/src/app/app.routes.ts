@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { adminGuard } from './auth/admin-guard';
+import { authGuard } from './auth/auth-guard';
 
 export const routes: Routes = [
   {
@@ -18,6 +19,11 @@ export const routes: Routes = [
   {
     path: 'kontakt',
     loadComponent: () => import('./contact/contact').then((m) => m.Contact),
+  },
+  {
+    path: 'konto',
+    canActivate: [authGuard],
+    loadComponent: () => import('./account/account').then((m) => m.Account),
   },
   {
     path: 'login',

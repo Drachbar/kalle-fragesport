@@ -2,9 +2,12 @@ import { describe, it, expect, beforeEach } from "vitest";
 import {
   registerUser,
   loginUser,
+  changePassword,
+  deleteAccount,
   EmailAlreadyInUseError,
+  InvalidPasswordError,
 } from "./auth.service";
-import { hashPassword } from "./password";
+import { hashPassword, verifyPassword } from "./password";
 import type { UsersRepository } from "../users/users.repository";
 import type { NewUser, User } from "../users/users.types";
 
@@ -29,6 +32,18 @@ function createFakeRepo(initial: User[] = []): UsersRepository {
     },
     async findUserById(id: string) {
       return users.find((u) => u.id === id) ?? null;
+    },
+    async updatePassword(id: string, passwordHash: string) {
+      const user = users.find((u) => u.id === id);
+      if (user) {
+        user.passwordHash = passwordHash;
+      }
+    },
+    async deleteUser(id: string) {
+      const i = users.findIndex((u) => u.id === id);
+      if (i !== -1) {
+        users.splice(i, 1);
+      }
     },
   };
 }
@@ -98,6 +113,75 @@ describe("auth.service", () => {
       await expect(
         loginUser("finns-inte@post.se", "hemligt123", repo),
       ).resolves.toBeNull();
+    });
+  });
+
+  async function seedOneUser(): Promise<UsersRepository> {
+    return createFakeRepo([
+      {
+        id: "id-1",
+        email: "kalle@post.se",
+        passwordHash: await hashPassword("nuvarande123"),
+        role: "user",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ]);
+  }
+
+  describe("changePassword", () => {
+    it("byter lösenord när nuvarande lösenord stämmer", async () => {
+      const seeded = await seedOneUser();
+
+      await changePassword("id-1", "nuvarande123", "nyttlosen456", seeded);
+
+      const user = await seeded.findUserById("id-1");
+      expect(await verifyPassword("nyttlosen456", user!.passwordHash)).toBe(
+        true,
+      );
+      expect(await verifyPassword("nuvarande123", user!.passwordHash)).toBe(
+        false,
+      );
+    });
+
+    it("kastar InvalidPasswordError vid fel nuvarande lösenord", async () => {
+      const seeded = await seedOneUser();
+
+      await expect(
+        changePassword("id-1", "felaktigt", "nyttlosen456", seeded),
+      ).rejects.toBeInstanceOf(InvalidPasswordError);
+
+      // Lösenordet ska vara oförändrat.
+      const user = await seeded.findUserById("id-1");
+      expect(await verifyPassword("nuvarande123", user!.passwordHash)).toBe(
+        true,
+      );
+    });
+
+    it("kastar InvalidPasswordError om användaren saknas", async () => {
+      await expect(
+        changePassword("saknas", "nuvarande123", "nyttlosen456", repo),
+      ).rejects.toBeInstanceOf(InvalidPasswordError);
+    });
+  });
+
+  describe("deleteAccount", () => {
+    it("raderar kontot när lösenordet stämmer", async () => {
+      const seeded = await seedOneUser();
+
+      await deleteAccount("id-1", "nuvarande123", seeded);
+
+      expect(await seeded.findUserById("id-1")).toBeNull();
+    });
+
+    it("kastar InvalidPasswordError vid fel lösenord och behåller kontot", async () => {
+      const seeded = await seedOneUser();
+
+      await expect(
+        deleteAccount("id-1", "felaktigt", seeded),
+      ).rejects.toBeInstanceOf(InvalidPasswordError);
+
+      expect(await seeded.findUserById("id-1")).not.toBeNull();
     });
   });
 });
