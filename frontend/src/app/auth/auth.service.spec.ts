@@ -110,6 +110,21 @@ describe('AuthService', () => {
     req.flush(null, { status: 204, statusText: 'No Content' });
   });
 
+  it('logoutEverywhere POST:ar till /api/auth/logout-all och nollställer currentUser', () => {
+    service.login('kalle@post.se', 'hemligt123').subscribe();
+    httpMock.expectOne('/api/auth/login').flush(admin);
+    expect(service.isLoggedIn()).toBe(true);
+
+    service.logoutEverywhere().subscribe();
+    const req = httpMock.expectOne('/api/auth/logout-all');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.withCredentials).toBe(true);
+    req.flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(service.currentUser()).toBeNull();
+    expect(service.isLoggedIn()).toBe(false);
+  });
+
   it('deleteAccount DELETE:ar med lösenord och nollställer currentUser', () => {
     service.login('kalle@post.se', 'hemligt123').subscribe();
     httpMock.expectOne('/api/auth/login').flush(admin);

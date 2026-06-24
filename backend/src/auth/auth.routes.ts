@@ -9,6 +9,7 @@ import {
   InvalidPasswordError,
 } from "./auth.service";
 import { requireAuth } from "./middleware";
+import { DbSessionStore } from "./session-store";
 import { usersRepository } from "../users/users.repository";
 import { createLogger } from "../logging/logger";
 
@@ -43,6 +44,8 @@ export interface AuthRouterDeps {
     newPassword: string,
   ) => Promise<void>;
   deleteAccount: (userId: string, password: string) => Promise<void>;
+  /** Raderar användarens sessioner; med exceptSid behålls den nuvarande. */
+  destroyUserSessions: (userId: string, exceptSid?: string) => Promise<void>;
 }
 
 const defaultDeps: AuthRouterDeps = {
@@ -52,6 +55,8 @@ const defaultDeps: AuthRouterDeps = {
   changePassword: (userId, currentPassword, newPassword) =>
     defaultChangePassword(userId, currentPassword, newPassword),
   deleteAccount: (userId, password) => defaultDeleteAccount(userId, password),
+  destroyUserSessions: (userId, exceptSid) =>
+    new DbSessionStore().destroyAllForUser(userId, exceptSid),
 };
 
 export function createAuthRouter(deps: AuthRouterDeps = defaultDeps): Router {
@@ -156,8 +161,6 @@ export function createAuthRouter(deps: AuthRouterDeps = defaultDeps): Router {
         parsed.data.currentPassword,
         parsed.data.newPassword,
       );
-      log.info("Lösenord ändrat", { userId: req.session.userId });
-      res.status(204).end();
     } catch (err) {
       if (err instanceof InvalidPasswordError) {
         res.status(403).json({ error: "Fel nuvarande lösenord" });
@@ -165,6 +168,28 @@ export function createAuthRouter(deps: AuthRouterDeps = defaultDeps): Router {
       }
       throw err;
     }
+
+    // Logga ut alla andra enheter, men behåll den nuvarande sessionen.
+    await deps.destroyUserSessions(req.session.userId!, req.sessionID);
+    log.info("Lösenord ändrat", { userId: req.session.userId });
+    res.status(204).end();
+  });
+
+  // Logga ut från alla enheter (inklusive den nuvarande).
+  router.post("/logout-all", requireAuth, async (req, res) => {
+    const userId = req.session.userId!;
+    // Rensa övriga sessioner i databasen ...
+    await deps.destroyUserSessions(userId, req.sessionID);
+    // ... och avsluta den nuvarande på rätt sätt (rör cookie + minne).
+    req.session.destroy((err) => {
+      if (err) {
+        res.status(500).json({ error: "Kunde inte logga ut" });
+        return;
+      }
+      res.clearCookie("connect.sid");
+      log.info("Utloggad från alla enheter", { userId });
+      res.status(204).end();
+    });
   });
 
   // Radera kontot. Kräver inloggning + korrekt lösenord. Loggar ut efteråt.

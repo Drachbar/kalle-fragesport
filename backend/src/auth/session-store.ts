@@ -47,6 +47,24 @@ export class DbSessionStore extends Store {
       .catch((err) => callback?.(err));
   }
 
+  /**
+   * Raderar alla sessioner som tillhör en användare (userId ligger i sess-JSON).
+   * Med exceptSid behålls den angivna sessionen – användbart för att logga ut
+   * alla *andra* enheter men behålla den nuvarande.
+   */
+  async destroyAllForUser(userId: string, exceptSid?: string): Promise<void> {
+    if (exceptSid) {
+      await this.db.query(
+        `DELETE FROM "session" WHERE sess->>'userId' = $1 AND sid <> $2`,
+        [userId, exceptSid],
+      );
+      return;
+    }
+    await this.db.query(`DELETE FROM "session" WHERE sess->>'userId' = $1`, [
+      userId,
+    ]);
+  }
+
   touch(sid: string, session: SessionData, callback?: SessionCallback): void {
     this.db
       .query(`UPDATE "session" SET expire = $2 WHERE sid = $1`, [

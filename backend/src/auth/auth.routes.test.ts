@@ -32,6 +32,7 @@ function makeApp(deps: Partial<AuthRouterDeps>) {
       findUserById: deps.findUserById ?? vi.fn(),
       changePassword: deps.changePassword ?? vi.fn(),
       deleteAccount: deps.deleteAccount ?? vi.fn(),
+      destroyUserSessions: deps.destroyUserSessions ?? vi.fn(),
     }),
   );
   return app;
@@ -156,11 +157,14 @@ describe("PUT /auth/me/password", () => {
     expect(res.status).toBe(401);
   });
 
-  it("byter lösenord för inloggad användare → 204", async () => {
+  it("byter lösenord och loggar ut övriga sessioner → 204", async () => {
     const changePassword = vi.fn().mockResolvedValue(undefined);
+    const destroyUserSessions = vi.fn().mockResolvedValue(undefined);
     const app = makeApp({
       loginUser: vi.fn().mockResolvedValue(makeUser()),
+      findUserById: vi.fn().mockResolvedValue(makeUser()),
       changePassword,
+      destroyUserSessions,
     });
     const agent = await loginAgent(app);
 
@@ -174,6 +178,12 @@ describe("PUT /auth/me/password", () => {
       "nuvarande123",
       "nyttlosen456",
     );
+    // Övriga sessioner ska rensas, men den nuvarande (exceptSid) behållas.
+    expect(destroyUserSessions).toHaveBeenCalledWith("id-1", expect.any(String));
+
+    // Den nuvarande sessionen ska fortfarande vara giltig.
+    const me = await agent.get("/auth/me");
+    expect(me.status).toBe(200);
   });
 
   it("svarar 403 vid fel nuvarande lösenord", async () => {
@@ -245,5 +255,32 @@ describe("DELETE /auth/me", () => {
     const res = await agent.delete("/auth/me").send({ password: "fel" });
 
     expect(res.status).toBe(403);
+  });
+});
+
+describe("POST /auth/logout-all", () => {
+  it("svarar 401 när ingen är inloggad", async () => {
+    const res = await request(makeApp({})).post("/auth/logout-all");
+
+    expect(res.status).toBe(401);
+  });
+
+  it("loggar ut alla sessioner inklusive den nuvarande → 204", async () => {
+    const destroyUserSessions = vi.fn().mockResolvedValue(undefined);
+    const app = makeApp({
+      loginUser: vi.fn().mockResolvedValue(makeUser()),
+      findUserById: vi.fn().mockResolvedValue(makeUser()),
+      destroyUserSessions,
+    });
+    const agent = await loginAgent(app);
+
+    const res = await agent.post("/auth/logout-all");
+
+    expect(res.status).toBe(204);
+    expect(destroyUserSessions).toHaveBeenCalledWith("id-1", expect.any(String));
+
+    // Den nuvarande sessionen ska också vara borta.
+    const me = await agent.get("/auth/me");
+    expect(me.status).toBe(401);
   });
 });

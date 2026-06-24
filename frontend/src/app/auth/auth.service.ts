@@ -53,6 +53,13 @@ export class AuthService {
       .pipe(tap(() => this.user.set(null)));
   }
 
+  /** Loggar ut från alla enheter (avslutar alla sessioner) och nollställer state. */
+  logoutEverywhere(): Observable<void> {
+    return this.http
+      .post<void>('/api/auth/logout-all', null, { withCredentials: true })
+      .pipe(tap(() => this.user.set(null)));
+  }
+
   /** Byter lösenord. Kräver att nuvarande lösenord stämmer (verifieras i backend). */
   changePassword(
     currentPassword: string,

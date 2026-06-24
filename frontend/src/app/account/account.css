@@ -53,6 +53,12 @@
   font-size: 0.95rem;
 }
 
+.muted-note {
+  margin: 0 0 1.25rem;
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
 @media (max-width: 540px) {
   .card {
     padding: 1.5rem;

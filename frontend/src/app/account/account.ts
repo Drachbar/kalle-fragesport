@@ -98,6 +98,19 @@ export class Account {
     });
   }
 
+  // --- Logga ut från alla enheter ----------------------------------------
+  protected readonly logoutAllSubmitting = signal(false);
+
+  protected logoutEverywhere(): void {
+    this.logoutAllSubmitting.set(true);
+    this.auth.logoutEverywhere().subscribe({
+      next: () => this.router.navigateByUrl('/login'),
+      error: () => {
+        this.logoutAllSubmitting.set(false);
+      },
+    });
+  }
+
   // --- Radera konto -------------------------------------------------------
   protected readonly deleteForm = this.fb.nonNullable.group({
     password: ['', [Validators.required]],

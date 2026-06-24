@@ -5,7 +5,9 @@
     <h2>Byt lösenord</h2>
 
     @if (passwordSuccess()) {
-      <p class="success" role="status">Lösenordet har uppdaterats.</p>
+      <p class="success" role="status">
+        Lösenordet har uppdaterats. Du har loggats ut från övriga enheter.
+      </p>
     }
 
     <form
@@ -77,6 +79,22 @@
         {{ passwordSubmitting() ? 'Uppdaterar…' : 'Uppdatera lösenord' }}
       </button>
     </form>
+  </section>
+
+  <section class="card">
+    <h2>Aktiva sessioner</h2>
+    <p class="muted-note">
+      Loggar ut ditt konto på alla enheter där du är inloggad – inklusive den
+      här. Bra om du loggat in på en dator du inte längre har tillgång till.
+    </p>
+    <button
+      type="button"
+      class="btn btn-ghost"
+      [disabled]="logoutAllSubmitting()"
+      (click)="logoutEverywhere()"
+    >
+      {{ logoutAllSubmitting() ? 'Loggar ut…' : 'Logga ut från alla enheter' }}
+    </button>
   </section>
 
   <section class="card danger">

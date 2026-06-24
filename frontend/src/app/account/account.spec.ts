@@ -23,12 +23,14 @@ describe('Account', () => {
   let auth: {
     changePassword: ReturnType<typeof vi.fn>;
     deleteAccount: ReturnType<typeof vi.fn>;
+    logoutEverywhere: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
     auth = {
       changePassword: vi.fn().mockReturnValue(of(undefined)),
       deleteAccount: vi.fn().mockReturnValue(of(undefined)),
+      logoutEverywhere: vi.fn().mockReturnValue(of(undefined)),
     };
     await TestBed.configureTestingModule({
       imports: [Account],
@@ -116,5 +118,21 @@ describe('Account', () => {
     await fixture.whenStable();
 
     expect(auth.deleteAccount).not.toHaveBeenCalled();
+  });
+
+  it('loggar ut från alla enheter och navigerar till inloggningen', async () => {
+    const fixture = TestBed.createComponent(Account);
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+    const navigate = vi.spyOn(TestBed.inject(Router), 'navigateByUrl');
+
+    const button = Array.from(el.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Logga ut från alla enheter'),
+    ) as HTMLButtonElement;
+    button.click();
+    await fixture.whenStable();
+
+    expect(auth.logoutEverywhere).toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith('/login');
   });
 });
