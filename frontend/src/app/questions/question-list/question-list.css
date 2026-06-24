@@ -2,6 +2,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 1rem;
   margin-bottom: 1.5rem;
 }
@@ -64,9 +65,14 @@
   box-shadow: var(--shadow);
 }
 
+.question-main {
+  min-width: 0;
+}
+
 .question-main h2 {
   margin: 0 0 0.5rem;
   font-size: 1.1rem;
+  overflow-wrap: anywhere;
 }
 
 .meta {
@@ -104,4 +110,24 @@
   flex-direction: column;
   gap: 0.5rem;
   flex-shrink: 0;
+}
+
+/* Smala skärmar: lägg knapparna under frågan i en rad i stället för i en
+   kolumn till höger, så att de inte tränger ihop frågetexten. */
+@media (max-width: 640px) {
+  .question-card {
+    flex-direction: column;
+  }
+
+  .actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    width: 100%;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .actions .btn {
+    flex: 1 1 auto;
+  }
 }

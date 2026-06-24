@@ -1,9 +1,19 @@
-<h1>Kalle Frågesport</h1>
+<section class="hero">
+  <span class="hero-eyebrow">Quiz</span>
+  <h1>Kalle Frågesport</h1>
+  <p class="hero-sub">En slumpad fråga i taget — testa dina kunskaper.</p>
+</section>
 
 @if (error()) {
   <p role="alert" class="error">{{ error() }}</p>
 } @else if (loading()) {
-  <p>Laddar…</p>
+  <article class="quiz-card quiz-card--loading" aria-busy="true">
+    <span class="visually-hidden">Laddar…</span>
+    <div class="skeleton skeleton-tag"></div>
+    <div class="skeleton skeleton-line"></div>
+    <div class="skeleton skeleton-line skeleton-line--short"></div>
+    <div class="skeleton skeleton-block"></div>
+  </article>
 } @else if (current(); as q) {
   <article class="quiz-card">
     @if (q.category) {
@@ -12,16 +22,25 @@
     <p class="question">{{ q.question }}</p>
 
     @if (q.options.length) {
-      <ul class="options">
+      <ul class="options" [class.is-revealed]="showAnswer()">
         @for (opt of q.options; track opt) {
-          <li>{{ opt }}</li>
+          <li
+            class="option"
+            [class.is-correct]="showAnswer() && opt === q.answer"
+          >
+            <span class="option-marker" aria-hidden="true"></span>
+            <span class="option-text">{{ opt }}</span>
+          </li>
         }
       </ul>
     }
 
     @if (showAnswer()) {
       <p class="answer" aria-live="polite">
-        <strong>Rätt svar:</strong> {{ q.answer }}
+        <span class="answer-badge" aria-hidden="true">✓</span>
+        <span class="answer-body">
+          <strong>Rätt svar:</strong> {{ q.answer }}
+        </span>
       </p>
     }
 
@@ -36,9 +55,13 @@
       </button>
       <button type="button" class="btn btn-ghost" (click)="next()">
         Nästa fråga
+        <span aria-hidden="true">→</span>
       </button>
     </div>
   </article>
 } @else {
-  <p>Inga frågor än.</p>
+  <article class="quiz-card empty">
+    <p class="empty-emoji" aria-hidden="true">🗒️</p>
+    <p class="empty-text">Inga frågor än.</p>
+  </article>
 }
