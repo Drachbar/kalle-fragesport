@@ -1,26 +1,26 @@
 <header class="app-header">
   <nav class="app-nav" aria-label="Huvudmeny">
-<!--    <div class="nav-left">-->
-<!--      <a class="brand" routerLink="/">Kalle Frågesport</a>-->
-<!--      @if (auth.isAdmin()) {-->
-<!--        <a routerLink="/questions">Frågor</a>-->
-<!--      }-->
-<!--    </div>-->
-<!--    <div class="nav-actions">-->
-<!--      @if (auth.isLoggedIn()) {-->
-<!--        @if (auth.isAdmin()) {-->
-<!--          <a routerLink="/settings">Inställningar</a>-->
-<!--        }-->
-<!--        <a routerLink="/konto">Konto</a>-->
-<!--        <span class="user">{{ auth.currentUser()?.email }}</span>-->
-<!--        <button type="button" class="btn btn-ghost" (click)="logout()">-->
-<!--          Logga ut-->
-<!--        </button>-->
-<!--      } @else {-->
-<!--        <a routerLink="/login">Logga in</a>-->
-<!--        <a class="btn btn-primary" routerLink="/register">Skapa konto</a>-->
-<!--      }-->
-<!--    </div>-->
+    <div class="nav-left">
+      <a class="brand" routerLink="/">Kalle Frågesport</a>
+      @if (auth.isAdmin()) {
+        <a routerLink="/questions">Frågor</a>
+      }
+    </div>
+    <div class="nav-actions">
+      @if (auth.isLoggedIn()) {
+        @if (auth.isAdmin()) {
+          <a routerLink="/settings">Inställningar</a>
+        }
+        <a routerLink="/konto">Konto</a>
+        <span class="user">{{ auth.currentUser()?.email }}</span>
+        <button type="button" class="btn btn-ghost" (click)="logout()">
+          Logga ut
+        </button>
+      } @else {
+        <a routerLink="/login">Logga in</a>
+        <a class="btn btn-primary" routerLink="/register">Skapa konto</a>
+      }
+    </div>
   </nav>
 </header>
 
