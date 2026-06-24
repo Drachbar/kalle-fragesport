@@ -302,8 +302,10 @@ Sätt dessa vid körning (inte i imagen). Backend:
 | `NODE_ENV` | ja | `production` (slår på secure-cookies och `trust proxy`) |
 | `SESSION_SECRET` | ja | Hemlighet för sessions-cookien. Backend vägrar starta utan den |
 | `DATABASE_URL` | ja | T.ex. `postgres://user:pwd@db-server:5432/kalle` |
+| `APP_PUBLIC_URL` | ja | Publik frontend-URL för verifieringsmejl, t.ex. `https://kalle.example.com` |
 | `API_KEY_ENCRYPTION_KEY` | nej* | Krävs om admins ska kunna spara egna OpenAI-nycklar |
 | `OPENAI_API_KEY` / `OPENAI_MODEL` | nej | Delad OpenAI-nyckel för AI-uppdatering av svar |
+| `SMTP_HOST` / `SMTP_FROM` | nej | SMTP för kontaktformulär och verifieringsmejl. Utan SMTP loggas mejl lokalt |
 | `PORT` | nej | Default `3000` |
 
 Frontend (SSR):
@@ -340,6 +342,7 @@ podman run -d --name backend --network kalle-net \
   -e NODE_ENV=production \
   -e SESSION_SECRET=<hemlig> \
   -e DATABASE_URL=postgres://user:pwd@db-server:5432/kalle \
+  -e APP_PUBLIC_URL=https://kalle.example.com \
   -e API_KEY_ENCRYPTION_KEY=<hemlig> \
   kalle-backend
 

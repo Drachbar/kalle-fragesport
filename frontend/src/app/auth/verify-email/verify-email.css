@@ -1,0 +1,15 @@
+:host {
+  display: block;
+  max-width: 420px;
+  margin: 1rem auto;
+  padding: 2rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+.btn {
+  display: inline-block;
+  margin-top: 0.5rem;
+}

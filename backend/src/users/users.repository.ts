@@ -6,12 +6,13 @@ interface UserRow {
   email: string;
   password_hash: string;
   role: Role;
+  email_verified_at: Date | null;
   created_at: Date;
   updated_at: Date;
 }
 
 const SELECT_COLUMNS =
-  "id, email, password_hash, role, created_at, updated_at";
+  "id, email, password_hash, role, email_verified_at, created_at, updated_at";
 
 function mapRow(row: UserRow): User {
   return {
@@ -19,6 +20,7 @@ function mapRow(row: UserRow): User {
     email: row.email,
     passwordHash: row.password_hash,
     role: row.role,
+    emailVerifiedAt: row.email_verified_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

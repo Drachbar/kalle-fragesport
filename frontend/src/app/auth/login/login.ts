@@ -4,6 +4,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../auth.service';
@@ -49,8 +50,12 @@ export class Login {
 
     this.auth.login(email, password).subscribe({
       next: () => this.router.navigateByUrl('/'),
-      error: () => {
-        this.error.set('Fel e-post eller lösenord');
+      error: (err: HttpErrorResponse) => {
+        this.error.set(
+          err.status === 403
+            ? 'Verifiera din e-postadress innan du loggar in'
+            : 'Fel e-post eller lösenord',
+        );
         this.submitting.set(false);
       },
     });

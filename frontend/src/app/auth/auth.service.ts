@@ -35,6 +35,15 @@ export class AuthService {
     );
   }
 
+  /** Verifierar en ny användares e-postadress med token från mejllänken. */
+  verifyEmail(token: string): Observable<void> {
+    return this.http.post<void>(
+      '/api/auth/verify-email',
+      { token },
+      { withCredentials: true },
+    );
+  }
+
   /** Loggar in och sparar användaren i state. */
   login(email: string, password: string): Observable<AuthUser> {
     return this.http

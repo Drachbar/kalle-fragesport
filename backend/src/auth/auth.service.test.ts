@@ -5,6 +5,7 @@ import {
   changePassword,
   deleteAccount,
   EmailAlreadyInUseError,
+  EmailNotVerifiedError,
   InvalidPasswordError,
 } from "./auth.service";
 import { hashPassword, verifyPassword } from "./password";
@@ -21,6 +22,7 @@ function createFakeRepo(initial: User[] = []): UsersRepository {
         email: email.toLowerCase(),
         passwordHash,
         role,
+        emailVerifiedAt: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -81,6 +83,7 @@ describe("auth.service", () => {
           email: "kalle@post.se",
           passwordHash: await hashPassword("hemligt123"),
           role: "admin",
+          emailVerifiedAt: new Date(),
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -99,6 +102,7 @@ describe("auth.service", () => {
           email: "kalle@post.se",
           passwordHash: await hashPassword("hemligt123"),
           role: "user",
+          emailVerifiedAt: new Date(),
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -114,6 +118,24 @@ describe("auth.service", () => {
         loginUser("finns-inte@post.se", "hemligt123", repo),
       ).resolves.toBeNull();
     });
+
+    it("kastar EmailNotVerifiedError när lösenordet stämmer men e-posten inte är verifierad", async () => {
+      const seeded = createFakeRepo([
+        {
+          id: "id-1",
+          email: "ny@post.se",
+          passwordHash: await hashPassword("hemligt123"),
+          role: "user",
+          emailVerifiedAt: null,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      ]);
+
+      await expect(
+        loginUser("ny@post.se", "hemligt123", seeded),
+      ).rejects.toBeInstanceOf(EmailNotVerifiedError);
+    });
   });
 
   async function seedOneUser(): Promise<UsersRepository> {
@@ -123,6 +145,7 @@ describe("auth.service", () => {
         email: "kalle@post.se",
         passwordHash: await hashPassword("nuvarande123"),
         role: "user",
+        emailVerifiedAt: new Date(),
         createdAt: new Date(),
         updatedAt: new Date(),
       },

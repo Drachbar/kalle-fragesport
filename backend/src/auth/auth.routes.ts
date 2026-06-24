@@ -6,8 +6,14 @@ import {
   changePassword as defaultChangePassword,
   deleteAccount as defaultDeleteAccount,
   EmailAlreadyInUseError,
+  EmailNotVerifiedError,
   InvalidPasswordError,
 } from "./auth.service";
+import { createEmailVerificationConfig } from "./email-verification-mailer";
+import {
+  emailVerificationTokensRepository,
+  InvalidEmailVerificationTokenError,
+} from "./email-verification-tokens.repository";
 import { requireAuth } from "./middleware";
 import { DbSessionStore } from "./session-store";
 import { usersRepository } from "../users/users.repository";
@@ -34,6 +40,10 @@ const deleteAccountSchema = z.object({
   password: z.string().min(1),
 });
 
+const verifyEmailSchema = z.object({
+  token: z.string().min(1),
+});
+
 export interface AuthRouterDeps {
   registerUser: typeof defaultRegisterUser;
   loginUser: typeof defaultLoginUser;
@@ -46,6 +56,9 @@ export interface AuthRouterDeps {
   deleteAccount: (userId: string, password: string) => Promise<void>;
   /** Raderar användarens sessioner; med exceptSid behålls den nuvarande. */
   destroyUserSessions: (userId: string, exceptSid?: string) => Promise<void>;
+  createEmailVerificationToken: (userId: string) => Promise<string>;
+  sendVerificationEmail: (email: string, token: string) => Promise<void>;
+  verifyEmail: (token: string) => Promise<void>;
 }
 
 const defaultDeps: AuthRouterDeps = {
@@ -57,6 +70,11 @@ const defaultDeps: AuthRouterDeps = {
   deleteAccount: (userId, password) => defaultDeleteAccount(userId, password),
   destroyUserSessions: (userId, exceptSid) =>
     new DbSessionStore().destroyAllForUser(userId, exceptSid),
+  createEmailVerificationToken: (userId) =>
+    emailVerificationTokensRepository.createToken(userId),
+  sendVerificationEmail: (email, token) =>
+    createEmailVerificationConfig().sendVerificationEmail(email, token),
+  verifyEmail: (token) => emailVerificationTokensRepository.verifyToken(token),
 };
 
 export function createAuthRouter(deps: AuthRouterDeps = defaultDeps): Router {
@@ -74,6 +92,8 @@ export function createAuthRouter(deps: AuthRouterDeps = defaultDeps): Router {
         parsed.data.email,
         parsed.data.password,
       );
+      const token = await deps.createEmailVerificationToken(user.id);
+      await deps.sendVerificationEmail(user.email, token);
       log.info("Ny användare registrerad", { userId: user.id, email: user.email });
       res.status(201).json({ id: user.id, email: user.email, role: user.role });
     } catch (err) {
@@ -95,7 +115,19 @@ export function createAuthRouter(deps: AuthRouterDeps = defaultDeps): Router {
       return;
     }
 
-    const user = await deps.loginUser(parsed.data.email, parsed.data.password);
+    let user;
+    try {
+      user = await deps.loginUser(parsed.data.email, parsed.data.password);
+    } catch (err) {
+      if (err instanceof EmailNotVerifiedError) {
+        log.warn("Inloggning avvisad: e-post ej verifierad", {
+          email: parsed.data.email,
+        });
+        res.status(403).json({ error: err.message });
+        return;
+      }
+      throw err;
+    }
     if (!user) {
       log.warn("Misslyckad inloggning", { email: parsed.data.email });
       // Generiskt fel för att inte avslöja om e-posten finns.
@@ -114,6 +146,25 @@ export function createAuthRouter(deps: AuthRouterDeps = defaultDeps): Router {
       req.session.role = user.role;
       res.status(200).json({ id: user.id, email: user.email, role: user.role });
     });
+  });
+
+  router.post("/verify-email", async (req, res) => {
+    const parsed = verifyEmailSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Ogiltig verifieringslänk" });
+      return;
+    }
+
+    try {
+      await deps.verifyEmail(parsed.data.token);
+      res.status(204).end();
+    } catch (err) {
+      if (err instanceof InvalidEmailVerificationTokenError) {
+        res.status(400).json({ error: "Ogiltig eller utgången verifieringslänk" });
+        return;
+      }
+      throw err;
+    }
   });
 
   router.post("/logout", (req, res) => {

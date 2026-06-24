@@ -3,7 +3,12 @@ import express from "express";
 import session from "express-session";
 import request from "supertest";
 import { createAuthRouter, type AuthRouterDeps } from "./auth.routes";
-import { EmailAlreadyInUseError, InvalidPasswordError } from "./auth.service";
+import {
+  EmailAlreadyInUseError,
+  EmailNotVerifiedError,
+  InvalidPasswordError,
+} from "./auth.service";
+import { InvalidEmailVerificationTokenError } from "./email-verification-tokens.repository";
 import type { User } from "../users/users.types";
 
 function makeUser(over: Partial<User> = {}): User {
@@ -12,6 +17,7 @@ function makeUser(over: Partial<User> = {}): User {
     email: "kalle@post.se",
     passwordHash: "hash",
     role: "user",
+    emailVerifiedAt: new Date(),
     createdAt: new Date(),
     updatedAt: new Date(),
     ...over,
@@ -33,6 +39,10 @@ function makeApp(deps: Partial<AuthRouterDeps>) {
       changePassword: deps.changePassword ?? vi.fn(),
       deleteAccount: deps.deleteAccount ?? vi.fn(),
       destroyUserSessions: deps.destroyUserSessions ?? vi.fn(),
+      createEmailVerificationToken:
+        deps.createEmailVerificationToken ?? vi.fn(),
+      sendVerificationEmail: deps.sendVerificationEmail ?? vi.fn(),
+      verifyEmail: deps.verifyEmail ?? vi.fn(),
     }),
   );
   return app;
@@ -41,7 +51,13 @@ function makeApp(deps: Partial<AuthRouterDeps>) {
 describe("POST /auth/register", () => {
   it("skapar en användare och svarar 201", async () => {
     const registerUser = vi.fn().mockResolvedValue(makeUser());
-    const app = makeApp({ registerUser });
+    const createEmailVerificationToken = vi.fn().mockResolvedValue("token-123");
+    const sendVerificationEmail = vi.fn().mockResolvedValue(undefined);
+    const app = makeApp({
+      registerUser,
+      createEmailVerificationToken,
+      sendVerificationEmail,
+    });
 
     const res = await request(app)
       .post("/auth/register")
@@ -50,6 +66,11 @@ describe("POST /auth/register", () => {
     expect(res.status).toBe(201);
     expect(res.body).toMatchObject({ email: "kalle@post.se", role: "user" });
     expect(res.body.passwordHash).toBeUndefined();
+    expect(createEmailVerificationToken).toHaveBeenCalledWith("id-1");
+    expect(sendVerificationEmail).toHaveBeenCalledWith(
+      "kalle@post.se",
+      "token-123",
+    );
   });
 
   it("svarar 409 om e-posten redan finns", async () => {
@@ -101,6 +122,48 @@ describe("POST /auth/login", () => {
       .send({ email: "kalle@post.se", password: "fel" });
 
     expect(res.status).toBe(401);
+  });
+
+  it("svarar 403 när e-posten inte är verifierad", async () => {
+    const loginUser = vi.fn().mockRejectedValue(new EmailNotVerifiedError());
+    const app = makeApp({ loginUser });
+
+    const res = await request(app)
+      .post("/auth/login")
+      .send({ email: "ny@post.se", password: "hemligt123" });
+
+    expect(res.status).toBe(403);
+    expect(res.body.error).toBe("Verifiera din e-postadress innan du loggar in");
+    expect(res.headers["set-cookie"]).toBeUndefined();
+  });
+});
+
+describe("POST /auth/verify-email", () => {
+  it("verifierar en giltig token", async () => {
+    const verifyEmail = vi.fn().mockResolvedValue(undefined);
+    const app = makeApp({ verifyEmail });
+
+    const res = await request(app)
+      .post("/auth/verify-email")
+      .send({ token: "token-123" });
+
+    expect(res.status).toBe(204);
+    expect(verifyEmail).toHaveBeenCalledWith("token-123");
+  });
+
+  it("svarar 400 när token saknas eller är ogiltig", async () => {
+    const verifyEmail = vi.fn().mockRejectedValue(
+      new InvalidEmailVerificationTokenError(),
+    );
+    const app = makeApp({ verifyEmail });
+
+    const missing = await request(app).post("/auth/verify-email").send({});
+    const invalid = await request(app)
+      .post("/auth/verify-email")
+      .send({ token: "token-123" });
+
+    expect(missing.status).toBe(400);
+    expect(invalid.status).toBe(400);
   });
 });
 

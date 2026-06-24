@@ -1,0 +1,21 @@
+<h1>Verifiera e-post</h1>
+
+@switch (state()) {
+  @case ('loading') {
+    <p role="status">Verifierar e-postadressen…</p>
+  }
+  @case ('success') {
+    <p role="status" class="success">E-postadressen är verifierad.</p>
+    <a class="btn btn-primary" routerLink="/login">Logga in</a>
+  }
+  @case ('missing-token') {
+    <p role="alert" class="error">Verifieringslänken saknar token.</p>
+    <a routerLink="/register">Skapa konto igen</a>
+  }
+  @case ('error') {
+    <p role="alert" class="error">
+      Verifieringslänken är ogiltig eller har gått ut.
+    </p>
+    <a routerLink="/register">Skapa konto igen</a>
+  }
+}

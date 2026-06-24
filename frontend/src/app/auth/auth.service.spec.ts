@@ -65,6 +65,16 @@ describe('AuthService', () => {
     req.flush({ id: 'id-2', email: 'ny@post.se', role: 'user' });
   });
 
+  it('verifyEmail postar token till /api/auth/verify-email', () => {
+    service.verifyEmail('token-123').subscribe();
+
+    const req = httpMock.expectOne('/api/auth/verify-email');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.withCredentials).toBe(true);
+    expect(req.request.body).toEqual({ token: 'token-123' });
+    req.flush(null, { status: 204, statusText: 'No Content' });
+  });
+
   it('loadCurrentUser sätter användaren vid 200', () => {
     service.loadCurrentUser().subscribe();
 

@@ -35,6 +35,11 @@ export const routes: Routes = [
       import('./auth/register/register').then((m) => m.Register),
   },
   {
+    path: 'verify-email',
+    loadComponent: () =>
+      import('./auth/verify-email/verify-email').then((m) => m.VerifyEmail),
+  },
+  {
     path: 'questions',
     canActivate: [adminGuard],
     loadComponent: () =>

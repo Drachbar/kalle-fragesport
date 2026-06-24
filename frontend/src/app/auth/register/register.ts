@@ -12,8 +12,7 @@ import {
   ValidationErrors,
   Validators,
 } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
-import { switchMap } from 'rxjs';
+import { RouterLink } from '@angular/router';
 import { AuthService } from '../auth.service';
 import { controlError } from '../../shared/form-errors';
 
@@ -36,7 +35,6 @@ type FieldName = 'email' | 'password' | 'confirmPassword';
 export class Register {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
-  private readonly router = inject(Router);
 
   protected readonly form = this.fb.nonNullable.group(
     {
@@ -48,6 +46,7 @@ export class Register {
   );
   protected readonly error = signal<string | null>(null);
   protected readonly submitting = signal(false);
+  protected readonly verificationEmailSent = signal(false);
 
   /** Sant när bekräftelsen är ifylld men inte matchar lösenordet. */
   private mismatch(control: FieldName): boolean {
@@ -77,23 +76,24 @@ export class Register {
     }
 
     this.error.set(null);
+    this.verificationEmailSent.set(false);
     this.submitting.set(true);
     const { email, password } = this.form.getRawValue();
 
-    // Skapa kontot och logga sedan in direkt.
-    this.auth
-      .register(email, password)
-      .pipe(switchMap(() => this.auth.login(email, password)))
-      .subscribe({
-        next: () => this.router.navigateByUrl('/'),
-        error: (err: HttpErrorResponse) => {
-          this.error.set(
-            err.status === 409
-              ? 'E-postadressen är redan registrerad'
-              : 'Kunde inte skapa konto',
-          );
-          this.submitting.set(false);
-        },
-      });
+    this.auth.register(email, password).subscribe({
+      next: () => {
+        this.verificationEmailSent.set(true);
+        this.submitting.set(false);
+        this.form.reset();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.error.set(
+          err.status === 409
+            ? 'E-postadressen är redan registrerad'
+            : 'Kunde inte skapa konto',
+        );
+        this.submitting.set(false);
+      },
+    });
   }
 }

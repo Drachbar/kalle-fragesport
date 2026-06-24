@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
+import { HttpErrorResponse } from '@angular/common/http';
 import { provideRouter, Router } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { Login } from './login';
 import { AuthService } from '../auth.service';
 
@@ -69,5 +70,30 @@ describe('Login', () => {
 
     expect(auth.login).toHaveBeenCalledWith('kalle@post.se', 'hemligt123');
     expect(navigate).toHaveBeenCalledWith('/');
+  });
+
+  it('visar verifieringsmeddelande vid 403', async () => {
+    auth.login.mockReturnValue(
+      throwError(
+        () =>
+          new HttpErrorResponse({
+            status: 403,
+            statusText: 'Forbidden',
+          }),
+      ),
+    );
+    const fixture = TestBed.createComponent(Login);
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+
+    setInput(el, '#login-email', 'ny@post.se');
+    setInput(el, '#login-password', 'hemligt123');
+    (el.querySelector('form') as HTMLFormElement).dispatchEvent(
+      new Event('submit'),
+    );
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(el.textContent).toContain('Verifiera din e-postadress');
   });
 });

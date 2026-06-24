@@ -10,6 +10,14 @@ export class EmailAlreadyInUseError extends Error {
   }
 }
 
+/** Kastas när en användare försöker logga in innan e-posten är verifierad. */
+export class EmailNotVerifiedError extends Error {
+  constructor() {
+    super("Verifiera din e-postadress innan du loggar in");
+    this.name = "EmailNotVerifiedError";
+  }
+}
+
 /** Kastas när ett angivet lösenord inte stämmer (eller användaren saknas). */
 export class InvalidPasswordError extends Error {
   constructor() {
@@ -70,6 +78,9 @@ export async function loginUser(
   }
 
   const ok = await verifyPassword(password, user.passwordHash);
+  if (ok && !user.emailVerifiedAt) {
+    throw new EmailNotVerifiedError();
+  }
   return ok ? user : null;
 }
 

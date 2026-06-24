@@ -32,7 +32,7 @@ describe('Register', () => {
     expect(TestBed.createComponent(Register).componentInstance).toBeTruthy();
   });
 
-  it('registrerar, loggar in och navigerar vid giltigt formulär', async () => {
+  it('registrerar och visar att verifieringsmejl har skickats', async () => {
     const fixture = TestBed.createComponent(Register);
     await fixture.whenStable();
     const el = fixture.nativeElement as HTMLElement;
@@ -47,8 +47,9 @@ describe('Register', () => {
     await fixture.whenStable();
 
     expect(auth.register).toHaveBeenCalledWith('ny@post.se', 'hemligt123');
-    expect(auth.login).toHaveBeenCalledWith('ny@post.se', 'hemligt123');
-    expect(navigate).toHaveBeenCalledWith('/');
+    expect(auth.login).not.toHaveBeenCalled();
+    expect(navigate).not.toHaveBeenCalled();
+    expect(el.textContent).toContain('Vi har skickat ett verifieringsmejl');
   });
 
   it('blockerar när lösenorden inte matchar', async () => {

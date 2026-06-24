@@ -33,10 +33,12 @@ async function main(): Promise<void> {
     email: string;
     role: string;
   }>(
-    `INSERT INTO users (email, password_hash, role)
-     VALUES ($1, $2, 'admin')
+    `INSERT INTO users (email, password_hash, role, email_verified_at)
+     VALUES ($1, $2, 'admin', now())
      ON CONFLICT (email) DO UPDATE
-       SET password_hash = EXCLUDED.password_hash, role = 'admin'
+       SET password_hash = EXCLUDED.password_hash,
+           role = 'admin',
+           email_verified_at = COALESCE(users.email_verified_at, now())
      RETURNING id, email, role`,
     [normalizeEmail(email), passwordHash],
   );
