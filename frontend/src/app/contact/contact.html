@@ -1,0 +1,86 @@
+<section class="contact">
+  <h1>Kontakta oss</h1>
+  <p class="intro">
+    Har du en fråga, vill utöva dina rättigheter enligt vår
+    <a routerLink="/integritetspolicy">integritetspolicy</a> eller bara säga hej?
+    Fyll i formuläret nedan så återkommer vi.
+  </p>
+
+  @if (success()) {
+    <p class="success" role="status">
+      Tack! Ditt meddelande har skickats. Vi hör av oss så snart vi kan.
+    </p>
+  } @else {
+    <form [formGroup]="form" (ngSubmit)="submit()" novalidate>
+      @if (error()) {
+        <p role="alert" class="error">{{ error() }}</p>
+      }
+
+      <div class="field">
+        <label for="contact-name">Namn</label>
+        <input
+          id="contact-name"
+          type="text"
+          autocomplete="name"
+          formControlName="name"
+          [attr.aria-invalid]="isInvalid('name')"
+          aria-describedby="contact-name-error"
+        />
+        @if (errorFor('name'); as msg) {
+          <p id="contact-name-error" role="alert" class="field-error">
+            {{ msg }}
+          </p>
+        }
+      </div>
+
+      <div class="field">
+        <label for="contact-email">E-post</label>
+        <input
+          id="contact-email"
+          type="email"
+          autocomplete="email"
+          formControlName="email"
+          [attr.aria-invalid]="isInvalid('email')"
+          aria-describedby="contact-email-error"
+        />
+        @if (errorFor('email'); as msg) {
+          <p id="contact-email-error" role="alert" class="field-error">
+            {{ msg }}
+          </p>
+        }
+      </div>
+
+      <div class="field">
+        <label for="contact-message">Meddelande</label>
+        <textarea
+          id="contact-message"
+          rows="6"
+          formControlName="message"
+          [attr.aria-invalid]="isInvalid('message')"
+          aria-describedby="contact-message-error"
+        ></textarea>
+        @if (errorFor('message'); as msg) {
+          <p id="contact-message-error" role="alert" class="field-error">
+            {{ msg }}
+          </p>
+        }
+      </div>
+
+      <!-- Honeypot: dolt för människor, men bots fyller ofta i det. -->
+      <div class="honeypot" aria-hidden="true">
+        <label for="contact-website">Webbplats</label>
+        <input
+          id="contact-website"
+          type="text"
+          formControlName="website"
+          tabindex="-1"
+          autocomplete="off"
+        />
+      </div>
+
+      <button type="submit" class="btn btn-primary" [disabled]="submitting()">
+        {{ submitting() ? 'Skickar…' : 'Skicka meddelande' }}
+      </button>
+    </form>
+  }
+</section>

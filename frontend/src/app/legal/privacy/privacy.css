@@ -1,0 +1,53 @@
+.policy {
+  display: block;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+.policy h1 {
+  margin-bottom: 0.25rem;
+}
+
+.updated {
+  margin: 0 0 1.5rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.policy h2 {
+  margin: 1.75rem 0 0.5rem;
+  font-size: 1.15rem;
+  letter-spacing: -0.01em;
+}
+
+.policy p {
+  margin: 0 0 0.85rem;
+}
+
+.policy ul {
+  margin: 0 0 0.85rem;
+  padding-left: 1.3rem;
+}
+
+.policy li {
+  margin-bottom: 0.4rem;
+}
+
+.policy code {
+  padding: 0.1rem 0.35rem;
+  font-size: 0.88em;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+@media (max-width: 540px) {
+  .policy {
+    padding: 1.5rem;
+  }
+}

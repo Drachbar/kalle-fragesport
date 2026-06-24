@@ -82,4 +82,13 @@ describe('App', () => {
     );
     expect(link).not.toBeNull();
   });
+
+  it('har en footer med länk till integritetspolicyn', async () => {
+    const fixture = TestBed.createComponent(App);
+    await fixture.whenStable();
+    const link = (fixture.nativeElement as HTMLElement).querySelector(
+      'footer a[href="/integritetspolicy"]',
+    );
+    expect(link).not.toBeNull();
+  });
 });

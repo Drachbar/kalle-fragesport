@@ -11,6 +11,15 @@ export const routes: Routes = [
     loadComponent: () => import('./home/home').then((m) => m.Home),
   },
   {
+    path: 'integritetspolicy',
+    loadComponent: () =>
+      import('./legal/privacy/privacy').then((m) => m.Privacy),
+  },
+  {
+    path: 'kontakt',
+    loadComponent: () => import('./contact/contact').then((m) => m.Contact),
+  },
+  {
     path: 'login',
     loadComponent: () => import('./auth/login/login').then((m) => m.Login),
   },

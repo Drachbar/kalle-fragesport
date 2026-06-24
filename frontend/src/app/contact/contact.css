@@ -1,0 +1,49 @@
+.contact {
+  display: block;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 2.25rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
+
+.contact h1 {
+  margin-bottom: 0.5rem;
+}
+
+.intro {
+  margin: 0 0 1.75rem;
+  color: var(--muted);
+}
+
+.success {
+  margin: 0;
+  padding: 1rem 1.1rem;
+  background: var(--success-bg);
+  border: 1px solid var(--success-border);
+  border-radius: var(--radius);
+  color: #0b6b4a;
+  font-weight: 600;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Honeypot – göms helt men hålls åtkomlig för bots (inte display:none). */
+.honeypot {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+@media (max-width: 540px) {
+  .contact {
+    padding: 1.5rem;
+  }
+}

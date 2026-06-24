@@ -106,10 +106,53 @@
   white-space: nowrap;
 }
 
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
 .app-main {
+  width: 100%;
   max-width: 980px;
   margin: 0 auto;
   padding: 2.5rem 1.25rem 3.5rem;
+  flex: 1 0 auto;
+}
+
+.app-footer {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  max-width: 980px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 2rem;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.app-footer p {
+  margin: 0;
+}
+
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+}
+
+.app-footer a {
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.app-footer a:hover {
+  color: var(--primary-hover);
 }
 
 /* Smala skärmar: krymp luften, trunkera e-posten hårdare och göm den
