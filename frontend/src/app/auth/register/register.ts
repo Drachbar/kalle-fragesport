@@ -5,11 +5,26 @@ import {
   signal,
 } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import {
+  AbstractControl,
+  FormBuilder,
+  ReactiveFormsModule,
+  ValidationErrors,
+  Validators,
+} from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { switchMap } from 'rxjs';
 import { AuthService } from '../auth.service';
 import { controlError } from '../../shared/form-errors';
+
+/** Grupp-validator: kräver att lösenordet och bekräftelsen är identiska. */
+function passwordsMatch(group: AbstractControl): ValidationErrors | null {
+  const password = group.get('password')?.value;
+  const confirm = group.get('confirmPassword')?.value;
+  return password === confirm ? null : { passwordMismatch: true };
+}
+
+type FieldName = 'email' | 'password' | 'confirmPassword';
 
 @Component({
   selector: 'app-register',
@@ -23,20 +38,36 @@ export class Register {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
-  protected readonly form = this.fb.nonNullable.group({
-    email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(8)]],
-  });
+  protected readonly form = this.fb.nonNullable.group(
+    {
+      email: ['', [Validators.required, Validators.email]],
+      password: ['', [Validators.required, Validators.minLength(8)]],
+      confirmPassword: ['', [Validators.required]],
+    },
+    { validators: passwordsMatch },
+  );
   protected readonly error = signal<string | null>(null);
   protected readonly submitting = signal(false);
 
-  protected isInvalid(control: 'email' | 'password'): boolean {
-    const c = this.form.controls[control];
-    return c.invalid && c.touched;
+  /** Sant när bekräftelsen är ifylld men inte matchar lösenordet. */
+  private mismatch(control: FieldName): boolean {
+    return (
+      control === 'confirmPassword' &&
+      !!this.form.errors?.['passwordMismatch'] &&
+      this.form.controls.confirmPassword.touched
+    );
   }
 
-  protected errorFor(control: 'email' | 'password'): string | null {
-    return controlError(this.form.controls[control]);
+  protected isInvalid(control: FieldName): boolean {
+    const c = this.form.controls[control];
+    return (c.invalid && c.touched) || this.mismatch(control);
+  }
+
+  protected errorFor(control: FieldName): string | null {
+    return (
+      controlError(this.form.controls[control]) ??
+      (this.mismatch(control) ? 'Lösenorden matchar inte' : null)
+    );
   }
 
   protected submit(): void {

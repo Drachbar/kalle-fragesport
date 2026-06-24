@@ -38,6 +38,23 @@
     }
   </div>
 
+  <div class="field">
+    <label for="register-confirm-password">Bekräfta lösenord</label>
+    <input
+      id="register-confirm-password"
+      type="password"
+      autocomplete="new-password"
+      formControlName="confirmPassword"
+      aria-describedby="register-confirm-password-error"
+      [attr.aria-invalid]="isInvalid('confirmPassword')"
+    />
+    @if (errorFor('confirmPassword'); as msg) {
+      <p id="register-confirm-password-error" role="alert" class="field-error">
+        {{ msg }}
+      </p>
+    }
+  </div>
+
   <button type="submit" class="btn btn-primary" [disabled]="submitting()">
     Skapa konto
   </button>

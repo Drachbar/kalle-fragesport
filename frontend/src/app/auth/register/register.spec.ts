@@ -40,6 +40,7 @@ describe('Register', () => {
 
     setInput(el, '#register-email', 'ny@post.se');
     setInput(el, '#register-password', 'hemligt123');
+    setInput(el, '#register-confirm-password', 'hemligt123');
     (el.querySelector('form') as HTMLFormElement).dispatchEvent(
       new Event('submit'),
     );
@@ -48,6 +49,23 @@ describe('Register', () => {
     expect(auth.register).toHaveBeenCalledWith('ny@post.se', 'hemligt123');
     expect(auth.login).toHaveBeenCalledWith('ny@post.se', 'hemligt123');
     expect(navigate).toHaveBeenCalledWith('/');
+  });
+
+  it('blockerar när lösenorden inte matchar', async () => {
+    const fixture = TestBed.createComponent(Register);
+    await fixture.whenStable();
+    const el = fixture.nativeElement as HTMLElement;
+
+    setInput(el, '#register-email', 'ny@post.se');
+    setInput(el, '#register-password', 'hemligt123');
+    setInput(el, '#register-confirm-password', 'annatlosen');
+    (el.querySelector('form') as HTMLFormElement).dispatchEvent(
+      new Event('submit'),
+    );
+    await fixture.whenStable();
+
+    expect(auth.register).not.toHaveBeenCalled();
+    expect(el.textContent).toContain('Lösenorden matchar inte');
   });
 
   it('blockerar för kort lösenord', async () => {
