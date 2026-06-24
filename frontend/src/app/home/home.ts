@@ -35,8 +35,12 @@ export class Home {
   private readonly seo = inject(SeoService);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
-  /** AdSense-slot-id för annonsen ovanför quiz-kortet. TODO: ersätt platshållaren. */
-  protected readonly adSlot = '0000000000';
+  /**
+   * AdSense-slot-id för annonsen ovanför quiz-kortet. Tomt tills AdSense-kontot
+   * är godkänt och du skapat en annonsenhet – då döljs rutan helt (ingen tom
+   * yta). Klistra in slot-id:t här för att tända annonsen.
+   */
+  protected readonly adSlot = '';
 
   protected readonly current = signal<Question | null>(null);
   protected readonly showAnswer = signal(false);

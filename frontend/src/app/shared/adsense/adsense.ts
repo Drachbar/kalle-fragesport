@@ -37,8 +37,11 @@ interface AdsByGoogleWindow {
   host: { ngSkipHydration: 'true' },
 })
 export class Adsense {
-  /** Annons-slot-id från AdSense (per annonsenhet). */
-  readonly slot = input.required<string>();
+  /**
+   * Annons-slot-id från AdSense (per annonsenhet). Tomt = ingen enhet renderas
+   * (t.ex. innan kontot godkänts och slot-id finns), så ingen tom ruta visas.
+   */
+  readonly slot = input<string>('');
 
   protected readonly client = inject(ADSENSE_CLIENT);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
@@ -48,6 +51,9 @@ export class Adsense {
       // afterNextRender körs enbart i webbläsaren, efter att `<ins>`:en finns i
       // DOM:en, vilket är precis vad AdSense behöver för att fylla annonsen.
       afterNextRender(() => {
+        if (!this.slot()) {
+          return;
+        }
         const win = window as unknown as AdsByGoogleWindow;
         (win.adsbygoogle = win.adsbygoogle ?? []).push({});
       });

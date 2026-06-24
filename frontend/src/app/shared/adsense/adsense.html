@@ -1,8 +1,10 @@
-<ins
-  class="adsbygoogle"
-  style="display: block"
-  [attr.data-ad-client]="client"
-  [attr.data-ad-slot]="slot()"
-  data-ad-format="auto"
-  data-full-width-responsive="true"
-></ins>
+@if (slot()) {
+  <ins
+    class="adsbygoogle"
+    style="display: block"
+    [attr.data-ad-client]="client"
+    [attr.data-ad-slot]="slot()"
+    data-ad-format="auto"
+    data-full-width-responsive="true"
+  ></ins>
+}

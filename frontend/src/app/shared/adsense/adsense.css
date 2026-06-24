@@ -1,8 +1,10 @@
 :host {
   display: block;
-  margin: 1.5rem 0;
 }
 
+/* Marginalen ligger på själva enheten så att en tom host (inget slot-id ännu)
+   inte tar någon vertikal plats. */
 .adsbygoogle {
   display: block;
+  margin: 1.5rem 0;
 }

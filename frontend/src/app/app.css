@@ -155,6 +155,21 @@
   color: var(--primary-hover);
 }
 
+/* Knapp som ser ut som footer-länkarna men triggar Googles samtyckesruta. */
+.footer-link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.footer-link-button:hover {
+  color: var(--primary-hover);
+}
+
 /* Smala skärmar: krymp luften, trunkera e-posten hårdare och göm den
    helt när det blir riktigt trångt så att headern aldrig sticker ut. */
 @media (max-width: 640px) {

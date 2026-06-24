@@ -66,4 +66,24 @@ describe('Adsense', () => {
 
     expect(push).not.toHaveBeenCalled();
   });
+
+  it('renderar ingen annonsenhet innan ett slot-id är satt', async () => {
+    const fixture = create({ slot: '' });
+    await fixture.whenStable();
+
+    const ins = (fixture.nativeElement as HTMLElement).querySelector(
+      'ins.adsbygoogle',
+    );
+    expect(ins).toBeNull();
+  });
+
+  it('begär ingen annons när slot saknas', async () => {
+    const push = vi.fn();
+    adsWindow().adsbygoogle = { push };
+
+    const fixture = create({ slot: '' });
+    await fixture.whenStable();
+
+    expect(push).not.toHaveBeenCalled();
+  });
 });

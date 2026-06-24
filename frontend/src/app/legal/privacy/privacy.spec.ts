@@ -43,4 +43,13 @@ describe('Privacy', () => {
     expect(text.toLowerCase()).toContain('rättigheter');
     expect(text).toContain('Integritetsskyddsmyndigheten');
   });
+
+  it('informerar om annonser via Google AdSense och samtycke', () => {
+    const lower = text.toLowerCase();
+    expect(lower).toContain('adsense');
+    expect(lower).toContain('annons');
+    expect(lower).toContain('samtycke');
+    // Återkallande av samtycke ska finnas bland rättigheterna.
+    expect(lower).toContain('återkalla');
+  });
 });

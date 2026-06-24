@@ -1,10 +1,20 @@
 import { TestBed } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import { signal, PLATFORM_ID } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withFetch } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { App } from './app';
 import { AuthService, type AuthUser } from './auth/auth.service';
+
+interface GoogleFcWindow {
+  googlefc?: { showRevocationMessage?: () => void };
+}
+
+function consentButton(el: HTMLElement): HTMLButtonElement | undefined {
+  return Array.from(el.querySelectorAll('footer button')).find((b) =>
+    b.textContent?.includes('Hantera annonssamtycke'),
+  ) as HTMLButtonElement | undefined;
+}
 
 function configure(user: AuthUser | null): void {
   const u = signal(user);
@@ -90,5 +100,58 @@ describe('App', () => {
       'footer a[href="/integritetspolicy"]',
     );
     expect(link).not.toBeNull();
+  });
+
+  describe('annonssamtycke', () => {
+    afterEach(() => {
+      delete (window as GoogleFcWindow).googlefc;
+    });
+
+    it('har en knapp för att hantera annonssamtycke i footern', async () => {
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      expect(consentButton(fixture.nativeElement as HTMLElement)).toBeTruthy();
+    });
+
+    it('öppnar Googles samtyckesruta när man klickar på knappen', async () => {
+      const showRevocationMessage = vi.fn();
+      (window as GoogleFcWindow).googlefc = { showRevocationMessage };
+
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      consentButton(fixture.nativeElement as HTMLElement)?.click();
+
+      expect(showRevocationMessage).toHaveBeenCalledTimes(1);
+    });
+
+    it('kraschar inte om Googles CMP ännu inte har laddats', async () => {
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      const btn = consentButton(fixture.nativeElement as HTMLElement);
+
+      expect(() => btn?.click()).not.toThrow();
+    });
+
+    it('rör inte window under server-rendering (SSR)', async () => {
+      const showRevocationMessage = vi.fn();
+      (window as GoogleFcWindow).googlefc = { showRevocationMessage };
+
+      TestBed.resetTestingModule();
+      TestBed.configureTestingModule({
+        imports: [App],
+        providers: [
+          provideRouter([]),
+          provideHttpClient(withFetch()),
+          provideHttpClientTesting(),
+          { provide: PLATFORM_ID, useValue: 'server' },
+        ],
+      });
+
+      const fixture = TestBed.createComponent(App);
+      await fixture.whenStable();
+      consentButton(fixture.nativeElement as HTMLElement)?.click();
+
+      expect(showRevocationMessage).not.toHaveBeenCalled();
+    });
   });
 });
